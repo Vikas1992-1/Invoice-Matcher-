@@ -48,3 +48,12 @@ export interface ProcessingStats {
   mismatches: number;
   missing: number;
 }
+
+export interface HistoryItem {
+  id: string;
+  timestamp: string;
+  excelFileName: string;
+  pdfFileName: string;
+  stats: ProcessingStats;
+  results: InvoiceComparisonResult[];
+}
