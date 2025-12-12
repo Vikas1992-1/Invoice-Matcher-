@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut } from 'lucide-react';
 import { parseExcelFile, downloadExcelReport } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
@@ -10,6 +10,9 @@ import ComparisonResultRow from './components/ComparisonResultRow';
 import HistoryList from './components/HistoryList';
 
 type ViewMode = 'upload' | 'history' | 'results';
+
+// Constant ID for local usage since auth is removed
+const GUEST_ID = 'guest_user';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>('upload');
@@ -24,8 +27,8 @@ const App: React.FC = () => {
   const [loadedFromHistory, setLoadedFromHistory] = useState(false);
 
   useEffect(() => {
-    // Load history on mount
-    setHistoryItems(getHistory());
+    // Load history immediately for guest user
+    setHistoryItems(getHistory(GUEST_ID));
   }, []);
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +106,7 @@ const App: React.FC = () => {
       setView('results');
 
       // 5. Save to History
-      const savedItem = saveSession(excelFile.name, pdfFile.name, newStats, comparisonResults);
+      const savedItem = saveSession(GUEST_ID, excelFile.name, pdfFile.name, newStats, comparisonResults);
       if (savedItem) {
         setHistoryItems(prev => [savedItem, ...prev].slice(0, 20));
       } else {
@@ -151,7 +154,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteHistory = (id: string) => {
-    const updated = deleteSession(id);
+    const updated = deleteSession(GUEST_ID, id);
     setHistoryItems(updated);
   };
 
@@ -179,7 +182,7 @@ const App: React.FC = () => {
               <button 
                 onClick={() => {
                   if(confirm('Are you sure you want to clear all history?')) {
-                    clearAllHistory();
+                    clearAllHistory(GUEST_ID);
                     setHistoryItems([]);
                   }
                 }}
@@ -421,9 +424,6 @@ const App: React.FC = () => {
                 <History className="w-4 h-4" />
                 History
              </button>
-             <div className="hidden sm:block text-sm text-slate-500 border-l pl-4 border-slate-200">
-                Powered by Gemini 2.5 Flash
-             </div>
           </div>
         </div>
       </header>

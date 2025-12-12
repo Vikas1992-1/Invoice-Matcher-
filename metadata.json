@@ -1,5 +1,5 @@
 {
-  "name": "Invoice Matcher AI by Vikas",
+  "name": "Invoice Matcher",
   "description": "An intelligent tool to audit and reconcile invoice data extracted from PDFs against Excel records using Gemini AI.",
   "requestFramePermissions": []
 }
