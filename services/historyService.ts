@@ -1,57 +1,106 @@
+import { supabase } from './supabase';
 import { InvoiceComparisonResult, ProcessingStats, HistoryItem } from '../types';
 
-const STORAGE_KEY = 'invoice_matcher_history_local';
-
-export const getHistory = (): HistoryItem[] => {
+export const getHistory = async (userId: string): Promise<HistoryItem[]> => {
+  if (!userId) return [];
+  
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const { data, error } = await supabase
+      .from('history')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching history:', error);
+      return [];
+    }
+
+    // Map Supabase snake_case columns to TypeScript camelCase types
+    return data.map((item: any) => ({
+      id: item.id,
+      timestamp: item.created_at,
+      excelFileName: item.excel_file_name,
+      pdfFileName: item.pdf_file_name,
+      stats: item.stats,
+      results: item.results
+    }));
   } catch (e) {
     console.error("Failed to load history", e);
     return [];
   }
 };
 
-export const saveSession = (
+export const saveSession = async (
+  userId: string,
   excelFileName: string, 
   pdfFileName: string, 
   stats: ProcessingStats, 
   results: InvoiceComparisonResult[]
-): HistoryItem | null => {
+): Promise<HistoryItem | null> => {
+  if (!userId) return null;
+
   try {
-    const history = getHistory();
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      excelFileName,
-      pdfFileName,
-      stats,
-      results
+    const { data, error } = await supabase
+      .from('history')
+      .insert([
+        {
+          user_id: userId,
+          excel_file_name: excelFileName,
+          pdf_file_name: pdfFileName,
+          stats: stats,
+          results: results
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error saving session:', error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      timestamp: data.created_at,
+      excelFileName: data.excel_file_name,
+      pdfFileName: data.pdf_file_name,
+      stats: data.stats,
+      results: data.results
     };
-    
-    // Prepend new item, keep max 20 to avoid quota issues
-    const updated = [newItem, ...history].slice(0, 20);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    return newItem;
   } catch (e) {
     console.error("Failed to save history", e);
-    // Usually means quota exceeded
     return null;
   }
 };
 
-export const deleteSession = (id: string): HistoryItem[] => {
+export const deleteSession = async (userId: string, id: string): Promise<void> => {
+    if (!userId) return;
     try {
-        const history = getHistory();
-        const updated = history.filter(h => h.id !== id);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        return updated;
+        const { error } = await supabase
+          .from('history')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          console.error('Error deleting session:', error);
+        }
     } catch (e) {
         console.error("Failed to delete history item", e);
-        return [];
     }
 };
 
-export const clearAllHistory = () => {
-    localStorage.removeItem(STORAGE_KEY);
+export const clearAllHistory = async (userId: string): Promise<void> => {
+    if (userId) {
+        try {
+          // RLS ensures users only delete their own rows
+          const { error } = await supabase
+            .from('history')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows matching RLS
+          
+          if (error) console.error('Error clearing history:', error);
+        } catch (e) {
+          console.error("Failed to clear history", e);
+        }
+    }
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash } from 'lucide-react';
+import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut } from 'lucide-react';
 import { parseExcelFile, downloadExcelReport } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
@@ -8,10 +8,14 @@ import { getHistory, saveSession, deleteSession, clearAllHistory } from './servi
 import { InvoiceComparisonResult, ProcessingStats, HistoryItem } from './types';
 import ComparisonResultRow from './components/ComparisonResultRow';
 import HistoryList from './components/HistoryList';
+import { useAuth } from './contexts/AuthContext';
+import { supabase } from './services/supabase';
+import Login from './components/Login';
 
 type ViewMode = 'upload' | 'history' | 'results';
 
 const App: React.FC = () => {
+  const { user, loading } = useAuth();
   const [view, setView] = useState<ViewMode>('upload');
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -22,11 +26,41 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<ProcessingStats | null>(null);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [loadedFromHistory, setLoadedFromHistory] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
-    // Load local history on mount
-    setHistoryItems(getHistory());
-  }, []);
+    const fetchHistory = async () => {
+      if (user) {
+        setIsLoadingHistory(true);
+        const data = await getHistory(user.id);
+        setHistoryItems(data);
+        setIsLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+        await supabase.auth.signOut();
+    } catch (error) {
+        console.error("Error signing out:", error);
+    }
+  };
+
+  // Loading State
+  if (loading) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-50">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          </div>
+      );
+  }
+
+  // Not Logged In -> Show Login
+  if (!user) {
+      return <Login />;
+  }
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -61,7 +95,7 @@ const App: React.FC = () => {
   };
 
   const processFiles = async () => {
-    if (!excelFile || !pdfFile) {
+    if (!excelFile || !pdfFile || !user) {
       setError("Please upload both an Excel file and a PDF file.");
       return;
     }
@@ -95,9 +129,10 @@ const App: React.FC = () => {
       setLoadedFromHistory(false);
       setView('results');
 
-      const savedItem = saveSession(excelFile.name, pdfFile.name, newStats, comparisonResults);
+      // Async save
+      const savedItem = await saveSession(user.id, excelFile.name, pdfFile.name, newStats, comparisonResults);
       if (savedItem) {
-        setHistoryItems(prev => [savedItem, ...prev].slice(0, 20));
+        setHistoryItems(prev => [savedItem, ...prev]);
       }
 
     } catch (err: any) {
@@ -138,9 +173,21 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteHistory = (id: string) => {
-    const updated = deleteSession(id);
-    setHistoryItems(updated);
+  const handleDeleteHistory = async (id: string) => {
+    if (!user) return;
+    
+    // Optimistic update
+    setHistoryItems(prev => prev.filter(item => item.id !== id));
+    
+    await deleteSession(user.id, id);
+  };
+
+  const handleClearAllHistory = async () => {
+    if (!user) return;
+    if(confirm('Are you sure you want to clear all history?')) {
+        setHistoryItems([]); // Optimistic clear
+        await clearAllHistory(user.id);
+    }
   };
 
   const handleSelectHistory = (item: HistoryItem) => {
@@ -152,7 +199,61 @@ const App: React.FC = () => {
     setView('results');
   };
 
-  const renderContent = () => {
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div 
+             className="flex items-center gap-2 cursor-pointer" 
+             onClick={() => {
+                 setView('upload');
+                 if (loadedFromHistory) {
+                    setResults([]);
+                    setStats(null);
+                    setLoadedFromHistory(false);
+                 }
+             }}
+          >
+            <div className="bg-blue-600 p-2 rounded-lg">
+                <Receipt className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-slate-800">InvoiceMatcher AI</h1>
+          </div>
+          
+          <div className="flex items-center gap-4">
+             <button 
+                onClick={() => setView(view === 'history' ? 'upload' : 'history')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === 'history' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+             >
+                <History className="w-4 h-4" />
+                History
+             </button>
+             
+             <div className="h-6 w-px bg-slate-200"></div>
+             
+             <div className="flex items-center gap-3">
+               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold border border-blue-200">
+                  {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+               </div>
+               <button 
+                 onClick={handleLogout}
+                 className="text-sm text-slate-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                 title="Sign Out"
+               >
+                 <LogOut className="w-4 h-4" />
+               </button>
+             </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 sm:px-6 lg:px-8 py-8">
+        {renderContent()}
+      </main>
+    </div>
+  );
+
+  function renderContent() {
     if (view === 'history') {
       return (
         <div className="max-w-4xl mx-auto">
@@ -161,21 +262,22 @@ const App: React.FC = () => {
               <History className="w-6 h-6 text-blue-600" />
               Processing History
             </h2>
-            {historyItems.length > 0 && (
+            {user && historyItems.length > 0 && (
               <button 
-                onClick={() => {
-                  if(confirm('Are you sure you want to clear all history?')) {
-                    clearAllHistory();
-                    setHistoryItems([]);
-                  }
-                }}
+                onClick={handleClearAllHistory}
                 className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
               >
                 <Trash className="w-4 h-4" /> Clear All
               </button>
             )}
           </div>
-          <HistoryList items={historyItems} onSelect={handleSelectHistory} onDelete={handleDeleteHistory} />
+          {isLoadingHistory ? (
+              <div className="flex justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              </div>
+          ) : (
+             <HistoryList items={historyItems} onSelect={handleSelectHistory} onDelete={handleDeleteHistory} />
+          )}
         </div>
       );
     }
@@ -361,46 +463,7 @@ const App: React.FC = () => {
         )}
       </div>
     );
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div 
-             className="flex items-center gap-2 cursor-pointer" 
-             onClick={() => {
-                 setView('upload');
-                 if (loadedFromHistory) {
-                    setResults([]);
-                    setStats(null);
-                    setLoadedFromHistory(false);
-                 }
-             }}
-          >
-            <div className="bg-blue-600 p-2 rounded-lg">
-                <Receipt className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-slate-800">InvoiceMatcher AI</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-             <button 
-                onClick={() => setView(view === 'history' ? 'upload' : 'history')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === 'history' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
-             >
-                <History className="w-4 h-4" />
-                History
-             </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="px-4 sm:px-6 lg:px-8 py-8">
-        {renderContent()}
-      </main>
-    </div>
-  );
+  }
 };
 
 export default App;

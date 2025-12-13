@@ -1,1 +1,1 @@
-// Firebase service removed.
+// Firebase has been replaced by Supabase. See services/supabase.ts
