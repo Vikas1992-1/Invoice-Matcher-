@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut } from 'lucide-react';
+import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash } from 'lucide-react';
 import { parseExcelFile, downloadExcelReport } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
@@ -10,9 +10,6 @@ import ComparisonResultRow from './components/ComparisonResultRow';
 import HistoryList from './components/HistoryList';
 
 type ViewMode = 'upload' | 'history' | 'results';
-
-// Constant ID for local usage since auth is removed
-const GUEST_ID = 'guest_user';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>('upload');
@@ -27,14 +24,13 @@ const App: React.FC = () => {
   const [loadedFromHistory, setLoadedFromHistory] = useState(false);
 
   useEffect(() => {
-    // Load history immediately for guest user
-    setHistoryItems(getHistory(GUEST_ID));
+    // Load local history on mount
+    setHistoryItems(getHistory());
   }, []);
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setExcelFile(e.target.files[0]);
-      // If we are currently viewing results, reset to upload mode essentially but keep files
       if (view === 'results' && loadedFromHistory) {
          setResults([]);
          setStats(null);
@@ -74,24 +70,18 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // 1. Parse Excel
       console.log("Parsing Excel...");
       const excelData = await parseExcelFile(excelFile);
       if (excelData.length === 0) {
         throw new Error("No valid data found in Excel file.");
       }
-      console.log("Excel Data:", excelData);
-
-      // 2. Parse PDF with Gemini
+      
       console.log("Processing PDF with Gemini...");
       const pdfData = await processPdfWithGemini(pdfFile);
-      console.log("PDF Data:", pdfData);
-
-      // 3. Compare
+      
       console.log("Comparing...");
       const comparisonResults = compareInvoices(excelData, pdfData);
       
-      // 4. Calculate Stats
       const newStats: ProcessingStats = {
         totalExcel: excelData.length,
         totalPdf: pdfData.length,
@@ -105,13 +95,9 @@ const App: React.FC = () => {
       setLoadedFromHistory(false);
       setView('results');
 
-      // 5. Save to History
-      const savedItem = saveSession(GUEST_ID, excelFile.name, pdfFile.name, newStats, comparisonResults);
+      const savedItem = saveSession(excelFile.name, pdfFile.name, newStats, comparisonResults);
       if (savedItem) {
         setHistoryItems(prev => [savedItem, ...prev].slice(0, 20));
-      } else {
-        // Optional: warn user that history is full
-        console.warn("Could not save to history - storage full");
       }
 
     } catch (err: any) {
@@ -135,7 +121,6 @@ const App: React.FC = () => {
     try {
       const sortedPdfBytes = await createSortedPdf(pdfFile, results);
       
-      // Create blob and download link
       const blob = new Blob([sortedPdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -154,7 +139,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteHistory = (id: string) => {
-    const updated = deleteSession(GUEST_ID, id);
+    const updated = deleteSession(id);
     setHistoryItems(updated);
   };
 
@@ -162,8 +147,6 @@ const App: React.FC = () => {
     setResults(item.results);
     setStats(item.stats);
     setLoadedFromHistory(true);
-    // We cannot restore File objects from local storage, so we clear them to indicate this is a history view
-    // Users must re-upload PDF to use PDF features like sorting
     setExcelFile(null);
     setPdfFile(null);
     setView('results');
@@ -182,7 +165,7 @@ const App: React.FC = () => {
               <button 
                 onClick={() => {
                   if(confirm('Are you sure you want to clear all history?')) {
-                    clearAllHistory(GUEST_ID);
+                    clearAllHistory();
                     setHistoryItems([]);
                   }
                 }}
@@ -197,10 +180,8 @@ const App: React.FC = () => {
       );
     }
 
-    // Default View (Upload or Results)
     return (
       <div className="max-w-5xl mx-auto">
-        {/* Intro / Instructions */}
         {view === 'upload' && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-slate-100">
             <h2 className="text-lg font-semibold mb-2">Automated Invoice Reconciliation</h2>
@@ -209,7 +190,6 @@ const App: React.FC = () => {
             </p>
             
             <div className="grid md:grid-cols-2 gap-6 mt-6">
-              {/* Excel Upload */}
               <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors ${excelFile ? 'border-green-300 bg-green-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}>
                 <FileSpreadsheet className={`w-10 h-10 mb-3 ${excelFile ? 'text-green-600' : 'text-slate-400'}`} />
                 <div className="text-center">
@@ -224,7 +204,6 @@ const App: React.FC = () => {
                 </label>
               </div>
 
-              {/* PDF Upload */}
               <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors ${pdfFile ? 'border-purple-300 bg-purple-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}>
                 <FileText className={`w-10 h-10 mb-3 ${pdfFile ? 'text-purple-600' : 'text-slate-400'}`} />
                 <div className="text-center">
@@ -265,7 +244,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
@@ -273,10 +251,8 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {/* Results View - Shared by both Live Processing and History Viewing */}
         {(view === 'results' || (view === 'upload' && stats)) && stats && (
           <>
-            {/* History Warning Banner */}
             {loadedFromHistory && (
               <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r">
                 <div className="flex">
@@ -290,7 +266,6 @@ const App: React.FC = () => {
               </div>
             )}
 
-            {/* Stats Dashboard */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Processed</p>
@@ -310,7 +285,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Detailed Results */}
             {results.length > 0 && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
@@ -341,7 +315,6 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Match Section */}
                 {results.some(r => r.status === 'MATCH') && (
                     <div className="mb-6">
                         <h4 className="text-sm font-semibold text-green-700 uppercase tracking-wider mb-3">Matched Records</h4>
@@ -351,7 +324,6 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {/* Mismatch Section */}
                 {results.some(r => r.status === 'MISMATCH') && (
                     <div className="mb-6">
                         <h4 className="text-sm font-semibold text-amber-700 uppercase tracking-wider mb-3">Discrepancies</h4>
@@ -361,7 +333,6 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {/* Issues Section */}
                 {results.some(r => r.status.includes('MISSING')) && (
                     <div className="mb-6">
                         <h4 className="text-sm font-semibold text-red-700 uppercase tracking-wider mb-3">Missing / Not Found</h4>
@@ -373,7 +344,6 @@ const App: React.FC = () => {
               </div>
             )}
             
-            {/* Back Button for Results View */}
             <div className="mt-8 pt-6 border-t border-slate-200 flex justify-center">
                <button 
                  onClick={() => {
@@ -395,13 +365,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div 
              className="flex items-center gap-2 cursor-pointer" 
              onClick={() => {
-                 // Reset to home
                  setView('upload');
                  if (loadedFromHistory) {
                     setResults([]);
