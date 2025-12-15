@@ -100,26 +100,27 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
         isMatch: compareNumbers(excelInv.taxableAmount, pdfInv.taxableAmount)
       },
       // Individual Tax components comparison
+      // Explicitly setting tolerance to 1.0 to allow difference <= 1.0
       {
         fieldName: 'cgstAmount',
         label: 'CGST',
         excelValue: excelInv.cgstAmount || 0,
         pdfValue: pdfInv.cgstAmount || 0,
-        isMatch: compareNumbers(excelInv.cgstAmount || 0, pdfInv.cgstAmount || 0)
+        isMatch: compareNumbers(excelInv.cgstAmount || 0, pdfInv.cgstAmount || 0, 1.0)
       },
       {
         fieldName: 'sgstAmount',
         label: 'SGST',
         excelValue: excelInv.sgstAmount || 0,
         pdfValue: pdfInv.sgstAmount || 0,
-        isMatch: compareNumbers(excelInv.sgstAmount || 0, pdfInv.sgstAmount || 0)
+        isMatch: compareNumbers(excelInv.sgstAmount || 0, pdfInv.sgstAmount || 0, 1.0)
       },
       {
         fieldName: 'igstAmount',
         label: 'IGST',
         excelValue: excelInv.igstAmount || 0,
         pdfValue: pdfInv.igstAmount || 0,
-        isMatch: compareNumbers(excelInv.igstAmount || 0, pdfInv.igstAmount || 0)
+        isMatch: compareNumbers(excelInv.igstAmount || 0, pdfInv.igstAmount || 0, 1.0)
       },
       // Total GST field removed as requested
       {
