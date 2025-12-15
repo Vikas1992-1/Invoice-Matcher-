@@ -125,6 +125,7 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "PMC Consultant GST (PDF)": pdf.pmcConsultantGst || '',
       "Reverse Charge (PDF)": pdf.reverseCharge || '',
       "HSN Code (PDF)": pdf.hsnCode || '',
+      "Invoice Type (PDF)": pdf.invoiceType || '',
       "Signature Present (PDF)": pdf.hasSignature || '',
 
       // Moved Invoice Number fields here

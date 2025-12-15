@@ -12,6 +12,7 @@ const INVOICE_SCHEMA: Schema = {
       pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/Tax ID specifically labeled for a PMC (Project Management Consultant) or secondary consultant, if present." },
       reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Look for 'Reverse Charge: Yes/No', 'Tax Payable on Reverse Charge', or similar indicators. Return 'Yes' if applicable, otherwise 'No'." },
       hsn_code: { type: Type.STRING, description: "HSN or SAC code found in the invoice line items. If multiple are present, list them separated by commas." },
+      invoice_type: { type: Type.STRING, description: "The document type declared on the page. Examples: 'Tax Invoice', 'E-Invoice', 'Bill of Supply', 'Credit Note', 'Debit Note', 'Cash Memo', 'Delivery Challan'. If not explicitly stated, infer 'Tax Invoice'." },
       has_signature: { type: Type.STRING, description: "Indicates if the invoice contains a signature, official stamp, or digital signature. Return 'Yes' if present, otherwise 'No'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
       taxable_amount: { type: Type.NUMBER, description: "The base amount before tax." },
@@ -65,7 +66,8 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       8. Look specifically for a "PMC Consultant GST" or similar field if it exists and extract it.
       9. Look for "Reverse Charge" applicability (Yes/No).
       10. Look for "HSN Code" or "SAC Code" (typically 4-8 digits).
-      11. Identify if the invoice has a signature, stamp, or digital signature (return 'Yes' or 'No').
+      11. Identify the document type (e.g. Tax Invoice, E-Invoice, Credit Note, etc).
+      12. Identify if the invoice has a signature, stamp, or digital signature (return 'Yes' or 'No').
       
       Double check that you have captured ALL invoices in the file before finishing.
     `;
@@ -101,6 +103,7 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       pmcConsultantGst: item.pmc_consultant_gst || "",
       reverseCharge: item.reverse_charge || "No",
       hsnCode: item.hsn_code || "",
+      invoiceType: item.invoice_type || "Tax Invoice",
       hasSignature: item.has_signature || "No",
       invoiceNumber: item.invoice_number || "Unknown",
       invoiceDate: item.invoice_date || "",

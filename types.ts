@@ -17,6 +17,7 @@ export interface InvoiceData {
   reverseCharge?: string;
   hsnCode?: string;
   hasSignature?: string;
+  invoiceType?: string;
   // PDF Location
   pageRange?: {
     start: number;
