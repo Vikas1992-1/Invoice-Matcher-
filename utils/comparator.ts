@@ -36,7 +36,9 @@ const normalizeDate = (dateStr: string): string => {
 };
 
 export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]): InvoiceComparisonResult[] => {
-  const results: InvoiceComparisonResult[] = [];
+  // We use a multi-pass approach to ensure the best matches are claimed first.
+  // Result array matches the indices of excelData.
+  const results = new Array<InvoiceComparisonResult | null>(excelData.length).fill(null);
   
   // Track which PDF invoices have been matched to avoid duplicates
   const matchedPdfIndices = new Set<number>();
@@ -57,52 +59,8 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
       return false;
   };
 
-  // Iterate through Excel data (Reference Source)
-  excelData.forEach(excelInv => {
-    let matchedPdfIndex = -1;
-    let matchMethod = 'ID';
-
-    // 1. Try Strict/Normalized ID Match
-    matchedPdfIndex = pdfData.findIndex((pdfInv, idx) => 
-        !matchedPdfIndices.has(idx) && isIdMatch(excelInv.invoiceNumber, pdfInv.invoiceNumber)
-    );
-
-    // 2. If no ID match, try Heuristic Match: Same Total Amount AND Same Date
-    if (matchedPdfIndex === -1) {
-        matchedPdfIndex = pdfData.findIndex((pdfInv, idx) => {
-            if (matchedPdfIndices.has(idx)) return false;
-            
-            const amountMatch = compareNumbers(excelInv.totalAmount, pdfInv.totalAmount);
-            // Relaxed date match: exact string match or normalized match
-            const dateMatch = excelInv.invoiceDate === pdfInv.invoiceDate || 
-                              normalizeDate(excelInv.invoiceDate) === normalizeDate(pdfInv.invoiceDate);
-            
-            return amountMatch && dateMatch;
-        });
-        if (matchedPdfIndex !== -1) {
-            matchMethod = 'HEURISTIC';
-        }
-    }
-
-    if (matchedPdfIndex === -1) {
-      results.push({
-        invoiceNumber: excelInv.invoiceNumber,
-        status: 'MISSING_IN_PDF',
-        originalReference: excelInv,
-        fields: [
-             // Add reference data for the missing invoice to help user debug
-             { fieldName: 'totalAmount', label: 'Expected Amount', excelValue: excelInv.totalAmount, pdfValue: undefined, isMatch: false },
-             { fieldName: 'invoiceDate', label: 'Expected Date', excelValue: excelInv.invoiceDate, pdfValue: undefined, isMatch: false }
-        ]
-      });
-      return;
-    }
-
-    // We found a match!
-    matchedPdfIndices.add(matchedPdfIndex);
-    const pdfInv = pdfData[matchedPdfIndex];
-
-    // Compare fields
+  // Helper to build the Comparison Result object
+  const buildResult = (excelInv: InvoiceData, pdfInv: InvoiceData, matchMethod: string): InvoiceComparisonResult => {
     const fields: ComparisonField[] = [
       {
         fieldName: 'vendorName',
@@ -159,20 +117,107 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
 
     const hasMismatch = fields.some(f => !f.isMatch);
     
-    results.push({
+    return {
       invoiceNumber: excelInv.invoiceNumber,
       status: hasMismatch ? 'MISMATCH' : 'MATCH',
       originalReference: excelInv,
       extractedData: pdfInv,
       fields,
       confidence: matchMethod === 'HEURISTIC' ? 0.8 : 1.0
-    });
+    };
+  };
+
+  // --- PASS 1: Strict Match (Invoice ID AND GST Number) ---
+  // This prioritizes differentiating duplicate Invoice IDs by their GST Number.
+  excelData.forEach((excelInv, index) => {
+    // Candidates matching ID
+    const candidates = pdfData.map((pdfInv, idx) => ({ pdfInv, idx }))
+      .filter(({ pdfInv, idx }) => 
+        !matchedPdfIndices.has(idx) && isIdMatch(excelInv.invoiceNumber, pdfInv.invoiceNumber)
+      );
+    
+    // Check for GST Match among candidates
+    if (candidates.length > 0 && excelInv.gstNumber) {
+        const strictMatch = candidates.find(({ pdfInv }) => 
+           cleanString(excelInv.gstNumber) === cleanString(pdfInv.gstNumber)
+        );
+        
+        if (strictMatch) {
+            matchedPdfIndices.add(strictMatch.idx);
+            results[index] = buildResult(excelInv, strictMatch.pdfInv, 'STRICT_GST');
+        }
+    }
   });
 
-  // Remaining items in PDF are extra
+  // --- PASS 2: ID Match (Best Remaining Candidate) ---
+  // Matches any remaining items by ID. Uses Total Amount as tie-breaker if multiple IDs exist.
+  excelData.forEach((excelInv, index) => {
+    if (results[index]) return; // Already matched
+
+    const candidates = pdfData.map((pdfInv, idx) => ({ pdfInv, idx }))
+      .filter(({ pdfInv, idx }) => 
+        !matchedPdfIndices.has(idx) && isIdMatch(excelInv.invoiceNumber, pdfInv.invoiceNumber)
+      );
+
+    if (candidates.length > 0) {
+        // Tie-breaker: Try to match Total Amount
+        let bestCandidate = candidates.find(({ pdfInv }) => 
+            compareNumbers(excelInv.totalAmount, pdfInv.totalAmount)
+        );
+        
+        // If no amount match, just take the first one
+        if (!bestCandidate) {
+            bestCandidate = candidates[0];
+        }
+
+        matchedPdfIndices.add(bestCandidate.idx);
+        results[index] = buildResult(excelInv, bestCandidate.pdfInv, 'ID_ONLY');
+    }
+  });
+
+  // --- PASS 3: Heuristic Match (Same Total Amount AND Same Date) ---
+  // For invoices where ID might be read incorrectly
+  excelData.forEach((excelInv, index) => {
+    if (results[index]) return;
+
+    const matchedPdfIndex = pdfData.findIndex((pdfInv, idx) => {
+        if (matchedPdfIndices.has(idx)) return false;
+        
+        const amountMatch = compareNumbers(excelInv.totalAmount, pdfInv.totalAmount);
+        // Relaxed date match
+        const dateMatch = excelInv.invoiceDate === pdfInv.invoiceDate || 
+                          normalizeDate(excelInv.invoiceDate) === normalizeDate(pdfInv.invoiceDate);
+        
+        return amountMatch && dateMatch;
+    });
+
+    if (matchedPdfIndex !== -1) {
+        matchedPdfIndices.add(matchedPdfIndex);
+        results[index] = buildResult(excelInv, pdfData[matchedPdfIndex], 'HEURISTIC');
+    }
+  });
+
+  // --- Fill in MISSING_IN_PDF ---
+  excelData.forEach((excelInv, index) => {
+    if (!results[index]) {
+      results[index] = {
+        invoiceNumber: excelInv.invoiceNumber,
+        status: 'MISSING_IN_PDF',
+        originalReference: excelInv,
+        fields: [
+             { fieldName: 'totalAmount', label: 'Expected Amount', excelValue: excelInv.totalAmount, pdfValue: undefined, isMatch: false },
+             { fieldName: 'invoiceDate', label: 'Expected Date', excelValue: excelInv.invoiceDate, pdfValue: undefined, isMatch: false }
+        ]
+      };
+    }
+  });
+
+  // --- Collect MISSING_IN_EXCEL (Extras in PDF) ---
+  const finalResults: InvoiceComparisonResult[] = results.filter((r): r is InvoiceComparisonResult => r !== null);
+
   pdfData.forEach((pdfInv, idx) => {
     if (!matchedPdfIndices.has(idx)) {
-        results.push({
+        finalResults.push({
             invoiceNumber: pdfInv.invoiceNumber,
             status: 'MISSING_IN_EXCEL',
             extractedData: pdfInv,
@@ -183,5 +228,5 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
     }
   });
 
-  return results;
+  return finalResults;
 };

@@ -55,11 +55,12 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
                 // Use strict find for ID to avoid matching keys like "Valid" or "Paid"
                 id: String(findValStrict(['id', 'sr no', 's.no', 'serial no']) || '').trim(),
                 
-                vendorName: String(findVal(['vendor name', 'vendor']) || '').trim(),
+                vendorName: String(findVal(['vendor name', 'vendor', 'wd name']) || '').trim(),
                 gstNumber: String(findVal(['gst number', 'gst']) || '').trim(),
                 invoiceNumber: String(findVal(['invoice number', 'inv no', 'invoice #']) || '').trim(),
                 invoiceDate: invoiceDateStr,
-                taxableAmount: parseFloat(String(findVal(['base amount', 'taxable', 'taxable amount']) || '0').replace(/,/g, '')),
+                // Added 'gross amount' here as requested
+                taxableAmount: parseFloat(String(findVal(['base amount', 'gross amount', 'taxable', 'taxable amount']) || '0').replace(/,/g, '')),
                 gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount']) || '0').replace(/,/g, '')),
                 totalAmount: parseFloat(String(findVal(['invoice amount', 'total amount', 'total']) || '0').replace(/,/g, '')),
                 branch: String(findVal(['branch']) || ''),
