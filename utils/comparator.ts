@@ -15,7 +15,8 @@ const normalizeInvoiceId = (id: string): string => {
 };
 
 // Helper to compare numbers with a small epsilon for floating point errors
-const compareNumbers = (num1: number, num2: number, epsilon = 0.05): boolean => {
+// Tolerates a difference of up to 1.0 (inclusive) to handle rounding issues as requested
+const compareNumbers = (num1: number, num2: number, epsilon = 1.0): boolean => {
   return Math.abs(num1 - num2) <= epsilon;
 };
 
