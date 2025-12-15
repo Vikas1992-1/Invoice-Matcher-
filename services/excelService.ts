@@ -92,17 +92,21 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
         return field?.isMatch ? 'Match' : 'MISMATCH';
     };
 
+    // Enhance status with visuals
+    let statusDisplay = r.status as string;
+    if (r.status === 'MATCH') statusDisplay = '✅ MATCH';
+    else if (r.status === 'MISMATCH') statusDisplay = '⚠️ MISMATCH';
+    else if (r.status === 'MISSING_IN_PDF') statusDisplay = '❌ MISSING IN PDF';
+    else if (r.status === 'MISSING_IN_EXCEL') statusDisplay = '🔵 EXTRA IN PDF';
+
     return {
-      "Comparison Status": r.status,
+      "Comparison Status": statusDisplay,
       "Discrepancy Notes": r.status === 'MISMATCH' ? r.fields.filter(f => !f.isMatch).map(f => f.label).join(', ') : '',
       
       // Identifiers
-      "Invoice Number (Excel)": excel.invoiceNumber || (r.status === 'MISSING_IN_PDF' ? r.invoiceNumber : ''),
-      "Invoice Number (PDF)": pdf.invoiceNumber || (r.status === 'MISSING_IN_EXCEL' ? r.invoiceNumber : ''),
-      "Invoice Number Match": getMatchStatus('invoiceNumber'),
+      "ID": excel.id || '', 
       
       // Meta (From Excel usually)
-      "ID": excel.id || '', 
       "Branch": excel.branch || '',
       "WD Code": excel.wdCode || '',
       "SO Number": excel.soNumber || '',
@@ -121,6 +125,12 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "PMC Consultant GST (PDF)": pdf.pmcConsultantGst || '',
       "Reverse Charge (PDF)": pdf.reverseCharge || '',
       "HSN Code (PDF)": pdf.hsnCode || '',
+      "Signature Present (PDF)": pdf.hasSignature || '',
+
+      // Moved Invoice Number fields here
+      "Invoice Number (Excel)": excel.invoiceNumber || (r.status === 'MISSING_IN_PDF' ? r.invoiceNumber : ''),
+      "Invoice Number (PDF)": pdf.invoiceNumber || (r.status === 'MISSING_IN_EXCEL' ? r.invoiceNumber : ''),
+      "Invoice Number Match": getMatchStatus('invoiceNumber'),
 
       "Invoice Date (Excel)": excel.invoiceDate,
       "Invoice Date (PDF)": pdf.invoiceDate,
@@ -143,7 +153,7 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
   const worksheet = XLSX.utils.json_to_sheet(exportData);
   
   // Auto-width columns roughly
-  const colWidths = Object.keys(exportData[0] || {}).map(key => ({ wch: key.length + 5 }));
+  const colWidths = Object.keys(exportData[0] || {}).map(key => ({ wch: key.length + 8 }));
   worksheet['!cols'] = colWidths;
 
   const workbook = XLSX.utils.book_new();

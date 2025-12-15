@@ -16,6 +16,7 @@ export interface InvoiceData {
   pmcConsultantGst?: string;
   reverseCharge?: string;
   hsnCode?: string;
+  hasSignature?: string;
   // PDF Location
   pageRange?: {
     start: number;
