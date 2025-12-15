@@ -61,7 +61,13 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
                 invoiceDate: invoiceDateStr,
                 // Added 'gross amount' here as requested
                 taxableAmount: parseFloat(String(findVal(['base amount', 'gross amount', 'taxable', 'taxable amount']) || '0').replace(/,/g, '')),
-                gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount']) || '0').replace(/,/g, '')),
+                gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount', 'total tax']) || '0').replace(/,/g, '')),
+                
+                // Specific tax components
+                cgstAmount: parseFloat(String(findVal(['cgst', 'cgst amount', 'central tax']) || '0').replace(/,/g, '')),
+                sgstAmount: parseFloat(String(findVal(['sgst', 'sgst amount', 'state tax', 'utgst']) || '0').replace(/,/g, '')),
+                igstAmount: parseFloat(String(findVal(['igst', 'igst amount', 'integrated tax']) || '0').replace(/,/g, '')),
+
                 totalAmount: parseFloat(String(findVal(['invoice amount', 'total amount', 'total']) || '0').replace(/,/g, '')),
                 branch: String(findVal(['branch']) || ''),
                 description: String(findVal(['description']) || ''),
@@ -142,9 +148,20 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "Taxable Amount (PDF)": pdf.taxableAmount,
       "Taxable Amt Match": getMatchStatus('taxableAmount'),
 
-      "GST Amount (Excel)": excel.gstAmount,
-      "GST Amount (PDF)": pdf.gstAmount,
-      "GST Amt Match": getMatchStatus('gstAmount'),
+      // Tax Components
+      "CGST (Excel)": excel.cgstAmount,
+      "CGST (PDF)": pdf.cgstAmount,
+      "CGST Match": getMatchStatus('cgstAmount'),
+
+      "SGST (Excel)": excel.sgstAmount,
+      "SGST (PDF)": pdf.sgstAmount,
+      "SGST Match": getMatchStatus('sgstAmount'),
+
+      "IGST (Excel)": excel.igstAmount,
+      "IGST (PDF)": pdf.igstAmount,
+      "IGST Match": getMatchStatus('igstAmount'),
+
+      // Removed Total GST rows here as requested
 
       "Total Amount (Excel)": excel.totalAmount,
       "Total Amount (PDF)": pdf.totalAmount,

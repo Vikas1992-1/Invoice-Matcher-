@@ -99,13 +99,29 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
         pdfValue: pdfInv.taxableAmount,
         isMatch: compareNumbers(excelInv.taxableAmount, pdfInv.taxableAmount)
       },
+      // Individual Tax components comparison
       {
-        fieldName: 'gstAmount',
-        label: 'GST Amount',
-        excelValue: excelInv.gstAmount,
-        pdfValue: pdfInv.gstAmount,
-        isMatch: compareNumbers(excelInv.gstAmount, pdfInv.gstAmount)
+        fieldName: 'cgstAmount',
+        label: 'CGST',
+        excelValue: excelInv.cgstAmount || 0,
+        pdfValue: pdfInv.cgstAmount || 0,
+        isMatch: compareNumbers(excelInv.cgstAmount || 0, pdfInv.cgstAmount || 0)
       },
+      {
+        fieldName: 'sgstAmount',
+        label: 'SGST',
+        excelValue: excelInv.sgstAmount || 0,
+        pdfValue: pdfInv.sgstAmount || 0,
+        isMatch: compareNumbers(excelInv.sgstAmount || 0, pdfInv.sgstAmount || 0)
+      },
+      {
+        fieldName: 'igstAmount',
+        label: 'IGST',
+        excelValue: excelInv.igstAmount || 0,
+        pdfValue: pdfInv.igstAmount || 0,
+        isMatch: compareNumbers(excelInv.igstAmount || 0, pdfInv.igstAmount || 0)
+      },
+      // Total GST field removed as requested
       {
         fieldName: 'totalAmount',
         label: 'Invoice Amount',

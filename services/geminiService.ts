@@ -16,7 +16,10 @@ const INVOICE_SCHEMA: Schema = {
       has_signature: { type: Type.STRING, description: "Indicates if the invoice contains a signature, official stamp, or digital signature. Return 'Yes' if present, otherwise 'No'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
       taxable_amount: { type: Type.NUMBER, description: "The base amount before tax." },
-      gst_amount: { type: Type.NUMBER, description: "The total tax/GST amount." },
+      cgst_amount: { type: Type.NUMBER, description: "Central Goods and Services Tax amount. Return 0 if not present." },
+      sgst_amount: { type: Type.NUMBER, description: "State Goods and Services Tax amount. Return 0 if not present." },
+      igst_amount: { type: Type.NUMBER, description: "Integrated Goods and Services Tax amount. Return 0 if not present." },
+      gst_amount: { type: Type.NUMBER, description: "The total tax/GST amount (Sum of CGST, SGST, and IGST)." },
       total_amount: { type: Type.NUMBER, description: "The final total invoice amount including tax." },
       page_start: { type: Type.INTEGER, description: "The page number (1-based index) where this invoice STARTS in the PDF file." },
       page_end: { type: Type.INTEGER, description: "The page number (1-based index) where this invoice ENDS." }
@@ -68,6 +71,7 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       10. Look for "HSN Code" or "SAC Code" (typically 4-8 digits).
       11. Identify the document type (e.g. Tax Invoice, E-Invoice, Credit Note, etc).
       12. Identify if the invoice has a signature, stamp, or digital signature (return 'Yes' or 'No').
+      13. Extract the specific tax components (CGST, SGST, IGST) separately. If a component is not present, return 0.
       
       Double check that you have captured ALL invoices in the file before finishing.
     `;
@@ -109,6 +113,12 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       invoiceDate: item.invoice_date || "",
       taxableAmount: item.taxable_amount || 0,
       gstAmount: item.gst_amount || 0,
+      
+      // Mapped tax components
+      cgstAmount: item.cgst_amount || 0,
+      sgstAmount: item.sgst_amount || 0,
+      igstAmount: item.igst_amount || 0,
+
       totalAmount: item.total_amount || 0,
       pageRange: {
         start: item.page_start || 1,

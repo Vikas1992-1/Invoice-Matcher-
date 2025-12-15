@@ -5,6 +5,11 @@ export interface InvoiceData {
   invoiceDate: string;
   taxableAmount: number;
   gstAmount: number;
+  // Specific tax breakdown
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  
   totalAmount: number;
   // Extra fields from Excel for reference, not comparison
   id?: string;
