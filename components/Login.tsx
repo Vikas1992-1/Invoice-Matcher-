@@ -58,20 +58,20 @@ const Login: React.FC = () => {
         <div className="absolute bottom-[-20%] left-[20%] w-[600px] h-[600px] bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-xl w-full max-w-[420px] rounded-3xl shadow-[0_8px_40px_rgb(0,0,0,0.08)] border border-white/50 z-10 relative overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl w-full max-w-[380px] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/50 z-10 relative overflow-hidden">
         
         {/* Header Section */}
-        <div className="pt-10 pb-6 px-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 shadow-lg shadow-indigo-200 mb-6">
+        <div className="pt-8 pb-4 px-6 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 shadow-lg shadow-indigo-200 mb-4">
             <div className="relative">
-                <Receipt className="w-7 h-7 text-white" />
-                <Sparkles className="w-3 h-3 text-yellow-300 absolute -top-1 -right-2" />
+                <Receipt className="w-6 h-6 text-white" />
+                <Sparkles className="w-2.5 h-2.5 text-yellow-300 absolute -top-1 -right-1.5" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 mb-1 tracking-tight">
             {isLogin ? 'Welcome Back' : 'Get Started'}
           </h1>
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 text-xs">
             {isLogin 
               ? 'Enter your credentials to access the workspace.' 
               : 'Create your account to start matching invoices.'}
@@ -79,36 +79,36 @@ const Login: React.FC = () => {
         </div>
 
         {/* Form Section */}
-        <div className="px-8 pb-10">
+        <div className="px-6 pb-8">
           
           {/* Alerts */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600 font-medium">{error}</p>
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-600 font-medium">{error}</p>
             </div>
           )}
 
           {message && (
-             <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-               <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-               <p className="text-sm text-green-600 font-medium">{message}</p>
+             <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-100 flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
+               <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+               <p className="text-xs text-green-600 font-medium">{message}</p>
              </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             {!isLogin && (
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="text-xs font-semibold text-slate-500 ml-1 uppercase tracking-wider">Full Name</label>
+              <div className="space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Full Name</label>
                 <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                   </div>
                   <input
                     type="text"
                     required
-                    className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                    className="block w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -117,16 +117,16 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 ml-1 uppercase tracking-wider">Email</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Email</label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   type="email"
                   required
-                  className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                  className="block w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -134,17 +134,17 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 ml-1 uppercase tracking-wider">Password</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Password</label>
               <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   type="password"
                   required
                   minLength={6}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                  className="block w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -155,10 +155,10 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full relative overflow-hidden bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transform transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full relative overflow-hidden bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-2.5 rounded-lg shadow-md shadow-indigo-500/30 hover:shadow-indigo-500/40 transform transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
                   <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
@@ -168,8 +168,8 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <p className="text-slate-500 text-sm">
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+            <p className="text-slate-500 text-xs">
               {isLogin ? "New to InvoiceMatcher? " : "Already have an account? "}
               <button
                 onClick={() => {
@@ -187,7 +187,7 @@ const Login: React.FC = () => {
       </div>
       
       <div className="absolute bottom-6 text-center w-full z-0">
-         <p className="text-xs text-slate-400 font-medium">Powered by Gemini 2.0 Flash</p>
+         <p className="text-[10px] text-slate-400 font-medium">Powered by Gemini 2.0 Flash</p>
       </div>
     </div>
   );
