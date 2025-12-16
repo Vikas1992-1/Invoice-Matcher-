@@ -6,14 +6,14 @@ const INVOICE_SCHEMA: Schema = {
   items: {
     type: Type.OBJECT,
     properties: {
-      invoice_number: { type: Type.STRING, description: "The unique invoice number (e.g., INV-001, 10234). Keep alphanumeric characters/hyphens. Do not strip leading zeros." },
+      invoice_number: { type: Type.STRING, description: "The unique invoice number extracted EXACTLY as it appears on the document. Do not strip prefixes (like 'INV'), suffixes, special characters (like '/'), or leading zeros. Capture the full string." },
       vendor_name: { type: Type.STRING, description: "Name of the vendor/seller." },
       gst_number: { type: Type.STRING, description: "GSTIN or Tax ID of the vendor." },
       pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/Tax ID specifically labeled for a PMC (Project Management Consultant) or secondary consultant, if present." },
       reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Look for 'Reverse Charge: Yes/No', 'Tax Payable on Reverse Charge', or similar indicators. Return 'Yes' if applicable, otherwise 'No'." },
       hsn_code: { type: Type.STRING, description: "HSN or SAC code found in the invoice line items. If multiple are present, list them separated by commas." },
       invoice_type: { type: Type.STRING, description: "The document type declared on the page. Examples: 'Tax Invoice', 'E-Invoice', 'Bill of Supply', 'Credit Note', 'Debit Note', 'Cash Memo', 'Delivery Challan'. If not explicitly stated, infer 'Tax Invoice'." },
-      has_signature: { type: Type.STRING, description: "Indicates if the invoice contains a signature, official stamp, or digital signature. Return 'Yes' if present, otherwise 'No'." },
+      has_signature: { type: Type.STRING, description: "Indicates if the invoice is signed. Return 'Yes' if there is a handwritten signature, an official stamp, OR a digital signature (e.g. 'Digitally Signed by', 'DS'). Otherwise return 'No'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
       taxable_amount: { type: Type.NUMBER, description: "The base amount before tax." },
       cgst_amount: { type: Type.NUMBER, description: "Central Goods and Services Tax amount. Return 0 if not present." },
@@ -62,7 +62,7 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       1. Scan the entire document from start to finish. Do not stop after the first invoice.
       2. If multiple invoices appear on a single page, extract them as separate entries with the same page numbers.
       3. If an invoice spans multiple pages, combine the data into one entry and record the start and end pages correctly.
-      4. For the "Invoice Number", extract the ID exactly as printed.
+      4. For the "Invoice Number", extract the ID EXACTLY as printed on the document. Do not remove leading zeros, prefixes (like "INV-"), or suffixes. Capture the complete string.
       5. Standardize dates to YYYY-MM-DD.
       6. Return amounts as numbers.
       7. **IMPORTANT**: Identify the 'page_start' and 'page_end' (1-based) for each invoice based on its location in the file.
@@ -70,7 +70,7 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       9. Look for "Reverse Charge" applicability (Yes/No).
       10. Look for "HSN Code" or "SAC Code" (typically 4-8 digits).
       11. Identify the document type (e.g. Tax Invoice, E-Invoice, Credit Note, etc).
-      12. Identify if the invoice has a signature, stamp, or digital signature (return 'Yes' or 'No').
+      12. Check for signatures: Return 'Yes' if the invoice contains a handwritten signature, an official stamp, OR a DIGITAL SIGNATURE (e.g. text saying "Digitally Signed by", "DS", or digital certificate markers). If ANY of these exist, return 'Yes'.
       13. Extract the specific tax components (CGST, SGST, IGST) separately. If a component is not present, return 0.
       
       Double check that you have captured ALL invoices in the file before finishing.
