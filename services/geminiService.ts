@@ -6,23 +6,23 @@ const INVOICE_SCHEMA: Schema = {
   items: {
     type: Type.OBJECT,
     properties: {
-      invoice_number: { type: Type.STRING, description: "The unique invoice number extracted EXACTLY as it appears on the document. Do not strip prefixes (like 'INV'), suffixes, special characters (like '/'), or leading zeros. Capture the full string." },
+      invoice_number: { type: Type.STRING, description: "The unique invoice number extracted EXACTLY as it appears on the document. Do not strip prefixes, suffixes, special characters, or leading zeros. Capture the full literal string." },
       vendor_name: { type: Type.STRING, description: "Name of the vendor/seller." },
       gst_number: { type: Type.STRING, description: "GSTIN or Tax ID of the vendor." },
       pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/Tax ID specifically labeled for a PMC (Project Management Consultant) or secondary consultant, if present." },
-      reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Look for 'Reverse Charge: Yes/No', 'Tax Payable on Reverse Charge', or similar indicators. Return 'Yes' if applicable, otherwise 'No'." },
-      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in the invoice line items. If multiple are present, list them separated by commas." },
-      invoice_type: { type: Type.STRING, description: "The document type declared on the page. Examples: 'Tax Invoice', 'E-Invoice', 'Bill of Supply', 'Credit Note', 'Debit Note', 'Cash Memo', 'Delivery Challan'. If not explicitly stated, infer 'Tax Invoice'." },
-      has_signature: { type: Type.STRING, description: "Indicates if the invoice is signed. Return 'Yes' if there is a handwritten signature, an official stamp, OR a digital signature (e.g. 'Digitally Signed by', 'DS', digital certificates, or QR code signatures). Otherwise return 'No'." },
+      reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Return 'Yes' or 'No'." },
+      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items." },
+      invoice_type: { type: Type.STRING, description: "Document type (e.g., Tax Invoice, E-Invoice, Credit Note)." },
+      has_signature: { type: Type.STRING, description: "Return 'Yes' if there is a handwritten signature, stamp, OR digital signature (e.g., 'Digitally Signed by', 'DS', digital certificate markers, or signature QR codes). Otherwise 'No'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
-      taxable_amount: { type: Type.NUMBER, description: "The base amount before tax." },
-      cgst_amount: { type: Type.NUMBER, description: "Central Goods and Services Tax amount. Return 0 if not present." },
-      sgst_amount: { type: Type.NUMBER, description: "State Goods and Services Tax amount. Return 0 if not present." },
-      igst_amount: { type: Type.NUMBER, description: "Integrated Goods and Services Tax amount. Return 0 if not present." },
-      gst_amount: { type: Type.NUMBER, description: "The total tax/GST amount (Sum of CGST, SGST, and IGST)." },
-      total_amount: { type: Type.NUMBER, description: "The final total invoice amount including tax." },
-      page_start: { type: Type.INTEGER, description: "The page number (1-based index) where this invoice STARTS in the PDF file." },
-      page_end: { type: Type.INTEGER, description: "The page number (1-based index) where this invoice ENDS." }
+      taxable_amount: { type: Type.NUMBER, description: "Taxable amount, often labeled as 'Base Amount', 'Subtotal', or 'Value of Supply' before tax." },
+      cgst_amount: { type: Type.NUMBER, description: "Central GST amount." },
+      sgst_amount: { type: Type.NUMBER, description: "State GST amount." },
+      igst_amount: { type: Type.NUMBER, description: "Integrated GST amount." },
+      gst_amount: { type: Type.NUMBER, description: "Total tax (Sum of CGST, SGST, IGST)." },
+      total_amount: { type: Type.NUMBER, description: "Final total amount including tax." },
+      page_start: { type: Type.INTEGER, description: "1-based start page." },
+      page_end: { type: Type.INTEGER, description: "1-based end page." }
     },
     required: ["invoice_number", "total_amount", "page_start", "page_end"]
   }
@@ -41,7 +41,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]> => {
+export const processPdfWithGemini = async (pdfFile: File, excelReference: InvoiceData[]): Promise<InvoiceData[]> => {
   try {
     const base64Data = await fileToBase64(pdfFile);
     
@@ -51,28 +51,31 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+    // Format Excel data into a compact reference for Gemini to cross-check
+    const excelRefText = excelReference.map(inv => 
+        `Expected Inv: ${inv.invoiceNumber}, Date: ${inv.invoiceDate}, Base/Taxable: ${inv.taxableAmount}, Total: ${inv.totalAmount}, CGST: ${inv.cgstAmount || 0}, SGST: ${inv.sgstAmount || 0}, IGST: ${inv.igstAmount || 0}`
+    ).join('\n');
+
     const prompt = `
-      You are a specialized data extraction AI for auditing financial documents. The attached PDF contains MULTIPLE DISTINCT INVOICES.
+      You are a high-precision financial auditor. The PDF contains multiple invoices.
       
-      Your Goal: Extract structured data for EVERY SINGLE invoice found in the document with 100% precision.
-      
-      CRITICAL EXTRACTION RULES:
-      1. SCAN ALL PAGES: Look at every corner of every page. Do not miss any invoice.
-      2. EXACT INVOICE NUMBER: Extract the invoice number EXACTLY as printed. If it says "INV/00123/24", you MUST return "INV/00123/24". Do not shorten, do not remove zeros.
-      3. DIGITAL SIGNATURE DETECTION: Look specifically for digital signatures. Phrases like "Digitally Signed by", "DS [Name]", "Signed by...", or visible digital certificate boxes and QR codes representing signatures MUST be marked as 'Yes' in the 'has_signature' field.
-      4. PAGE TRACKING: Accurately record 'page_start' and 'page_end' for each document.
-      5. TAX COMPONENTS: Extract CGST, SGST, and IGST separately. If one is zero or not mentioned, return 0.
-      
-      SELF-VERIFICATION STEP (RECHECK MISMASH DATA):
-      - After your initial extraction, RE-READ the image specifically for the Invoice Number and Total Amount.
-      - If you see any ambiguity (e.g., '8' looking like 'B' or '0' looking like 'O'), verify with surrounding context.
-      - Ensure the sum of (Taxable Amount + CGST + SGST + IGST) equals the Total Amount. If it doesn't, re-extract the values carefully.
-      
-      Ensure you capture all details: PMC Consultant GST, Reverse Charge, HSN Codes, and Invoice Type.
+      REFERENCE EXCEL DATA (Ground Truth for comparison):
+      ${excelRefText}
+
+      INSTRUCTIONS:
+      1. EXTRACT ALL: Find every invoice in the PDF.
+      2. EXACT INVOICE NUMBER: Capture the invoice ID literal string exactly.
+      3. DIGITAL SIGNATURES: Mark 'has_signature' as 'Yes' if you see handwritten signatures, physical stamps, or DIGITAL signatures (text like "Digitally Signed by", "DS", or QR code signatures).
+      4. TAXABLE AMOUNT: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'. It is the sum of items before GST.
+      5. RECHECK MISMASH DATA: 
+         - Compare your extracted data against the REFERENCE EXCEL DATA. 
+         - If extracted 'Taxable Amount' (Base Amount) or 'Total Amount' differs from reference, RE-READ carefully.
+         - Pay special attention to tax components (CGST, SGST, IGST).
+      6. PRECISION: Ensure no numbers are skipped.
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -87,7 +90,6 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
       config: {
         responseMimeType: "application/json",
         responseSchema: INVOICE_SCHEMA,
-        // Increased thinking budget to allow for the self-verification step
         thinkingConfig: { thinkingBudget: 2048 }
       }
     });
@@ -95,7 +97,7 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
     const rawText = response.text || "[]";
     const parsedData = JSON.parse(rawText);
 
-    const mappedData: InvoiceData[] = parsedData.map((item: any) => ({
+    return parsedData.map((item: any) => ({
       vendorName: item.vendor_name || "Unknown",
       gstNumber: item.gst_number || "",
       pmcConsultantGst: item.pmc_consultant_gst || "",
@@ -116,8 +118,6 @@ export const processPdfWithGemini = async (pdfFile: File): Promise<InvoiceData[]
         end: item.page_end || item.page_start || 1
       }
     }));
-
-    return mappedData;
 
   } catch (error) {
     console.error("Error processing PDF with Gemini:", error);

@@ -19,7 +19,6 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
         
         const invoices: InvoiceData[] = jsonData.map((row: any) => {
             // Map keys flexibly based on user description
-            // Expected: branch, invoice ID, WD code, vendor name, GST number, description, SO, invoice number, invoice date, base amount/taxable amount, GST amount, and invoice amount
             
             // Helper to find value by loosely matching key (contains)
             const findVal = (keywords: string[]): any => {
@@ -27,7 +26,7 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
                 return key ? row[key] : undefined;
             };
 
-            // Helper for stricter matching (exact or starts with) to avoid false positives for short keys like "ID"
+            // Helper for stricter matching (exact or starts with)
             const findValStrict = (keywords: string[]): any => {
                 const key = Object.keys(row).find(k => {
                     const normK = normalizeKey(k);
@@ -45,25 +44,21 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
             // Handle Excel serial date
             if (typeof invoiceDateRaw === 'number') {
                 const date = XLSX.SSF.parse_date_code(invoiceDateRaw);
-                // format YYYY-MM-DD
                 invoiceDateStr = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
             } else {
                 invoiceDateStr = String(invoiceDateRaw || '');
             }
 
             return {
-                // Use strict find for ID to avoid matching keys like "Valid" or "Paid"
                 id: String(findValStrict(['id', 'sr no', 's.no', 'serial no']) || '').trim(),
-                
                 vendorName: String(findVal(['vendor name', 'vendor', 'wd name']) || '').trim(),
                 gstNumber: String(findVal(['gst number', 'gst']) || '').trim(),
                 invoiceNumber: String(findVal(['invoice number', 'inv no', 'invoice #']) || '').trim(),
                 invoiceDate: invoiceDateStr,
-                // Added 'gross amount' here as requested
-                taxableAmount: parseFloat(String(findVal(['base amount', 'gross amount', 'taxable', 'taxable amount']) || '0').replace(/,/g, '')),
+                // Explicitly prioritizing 'Base Amount' as requested
+                taxableAmount: parseFloat(String(findVal(['base amount', 'taxable amount', 'gross amount', 'taxable']) || '0').replace(/,/g, '')),
                 gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount', 'total tax']) || '0').replace(/,/g, '')),
                 
-                // Specific tax components
                 cgstAmount: parseFloat(String(findVal(['cgst', 'cgst amount', 'central tax']) || '0').replace(/,/g, '')),
                 sgstAmount: parseFloat(String(findVal(['sgst', 'sgst amount', 'state tax', 'utgst']) || '0').replace(/,/g, '')),
                 igstAmount: parseFloat(String(findVal(['igst', 'igst amount', 'integrated tax']) || '0').replace(/,/g, '')),
@@ -87,19 +82,16 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
 };
 
 export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
-  // Flatten data for export
   const exportData = results.map(r => {
     const excel = r.originalReference || {} as Partial<InvoiceData>;
     const pdf = r.extractedData || {} as Partial<InvoiceData>;
     
-    // Helper to get match status of a specific field
     const getMatchStatus = (fieldName: string) => {
         if (r.status === 'MISSING_IN_PDF' || r.status === 'MISSING_IN_EXCEL') return 'N/A';
         const field = r.fields.find(f => f.fieldName === fieldName);
         return field?.isMatch ? 'Match' : 'MISMATCH';
     };
 
-    // Enhance status with visuals
     let statusDisplay = r.status as string;
     if (r.status === 'MATCH') statusDisplay = '✅ MATCH';
     else if (r.status === 'MISMATCH') statusDisplay = '⚠️ MISMATCH';
@@ -109,17 +101,12 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
     return {
       "Comparison Status": statusDisplay,
       "Discrepancy Notes": r.status === 'MISMATCH' ? r.fields.filter(f => !f.isMatch).map(f => f.label).join(', ') : '',
-      
-      // Identifiers
       "ID": excel.id || '', 
-      
-      // Meta (From Excel usually)
       "Branch": excel.branch || '',
       "WD Code": excel.wdCode || '',
       "SO Number": excel.soNumber || '',
       "Description": excel.description || '',
 
-      // Comparisons
       "Vendor Name (Excel)": excel.vendorName,
       "Vendor Name (PDF)": pdf.vendorName,
       "Vendor Match": getMatchStatus('vendorName'),
@@ -128,14 +115,12 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "GST Number (PDF)": pdf.gstNumber,
       "GST Match": getMatchStatus('gstNumber'),
       
-      // New PDF extracted fields
       "PMC Consultant GST (PDF)": pdf.pmcConsultantGst || '',
       "Reverse Charge (PDF)": pdf.reverseCharge || '',
       "HSN Code (PDF)": pdf.hsnCode || '',
       "Invoice Type (PDF)": pdf.invoiceType || '',
       "Signature Present (PDF)": pdf.hasSignature || '',
 
-      // Moved Invoice Number fields here
       "Invoice Number (Excel)": excel.invoiceNumber || (r.status === 'MISSING_IN_PDF' ? r.invoiceNumber : ''),
       "Invoice Number (PDF)": pdf.invoiceNumber || (r.status === 'MISSING_IN_EXCEL' ? r.invoiceNumber : ''),
       "Invoice Number Match": getMatchStatus('invoiceNumber'),
@@ -144,11 +129,10 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "Invoice Date (PDF)": pdf.invoiceDate,
       "Date Match": getMatchStatus('invoiceDate'),
 
-      "Taxable Amount (Excel)": excel.taxableAmount,
-      "Taxable Amount (PDF)": pdf.taxableAmount,
-      "Taxable Amt Match": getMatchStatus('taxableAmount'),
+      "Taxable (Base) Amount (Excel)": excel.taxableAmount,
+      "Taxable (Base) Amount (PDF)": pdf.taxableAmount,
+      "Taxable Match": getMatchStatus('taxableAmount'),
 
-      // Tax Components
       "CGST (Excel)": excel.cgstAmount,
       "CGST (PDF)": pdf.cgstAmount,
       "CGST Match": getMatchStatus('cgstAmount'),
@@ -161,8 +145,6 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "IGST (PDF)": pdf.igstAmount,
       "IGST Match": getMatchStatus('igstAmount'),
 
-      // Removed Total GST rows here as requested
-
       "Total Amount (Excel)": excel.totalAmount,
       "Total Amount (PDF)": pdf.totalAmount,
       "Total Amt Match": getMatchStatus('totalAmount'),
@@ -170,8 +152,6 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
   });
 
   const worksheet = XLSX.utils.json_to_sheet(exportData);
-  
-  // Auto-width columns roughly
   const colWidths = Object.keys(exportData[0] || {}).map(key => ({ wch: key.length + 8 }));
   worksheet['!cols'] = colWidths;
 

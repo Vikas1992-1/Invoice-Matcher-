@@ -48,7 +48,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Loading State
   if (loading) {
       return (
           <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -57,7 +56,6 @@ const App: React.FC = () => {
       );
   }
 
-  // Not Logged In -> Show Login
   if (!user) {
       return <Login />;
   }
@@ -110,8 +108,8 @@ const App: React.FC = () => {
         throw new Error("No valid data found in Excel file.");
       }
       
-      console.log("Processing PDF with Gemini...");
-      const pdfData = await processPdfWithGemini(pdfFile);
+      console.log("Processing PDF with Gemini (and Excel Reference)...");
+      const pdfData = await processPdfWithGemini(pdfFile, excelData);
       
       console.log("Comparing...");
       const comparisonResults = compareInvoices(excelData, pdfData);
@@ -129,7 +127,6 @@ const App: React.FC = () => {
       setLoadedFromHistory(false);
       setView('results');
 
-      // Async save
       const savedItem = await saveSession(user.id, excelFile.name, pdfFile.name, newStats, comparisonResults);
       if (savedItem) {
         setHistoryItems(prev => [savedItem, ...prev]);
@@ -175,17 +172,14 @@ const App: React.FC = () => {
 
   const handleDeleteHistory = async (id: string) => {
     if (!user) return;
-    
-    // Optimistic update
     setHistoryItems(prev => prev.filter(item => item.id !== id));
-    
     await deleteSession(user.id, id);
   };
 
   const handleClearAllHistory = async () => {
     if (!user) return;
     if(confirm('Are you sure you want to clear all history?')) {
-        setHistoryItems([]); // Optimistic clear
+        setHistoryItems([]);
         await clearAllHistory(user.id);
     }
   };
@@ -288,7 +282,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-slate-100">
             <h2 className="text-lg font-semibold mb-2">Automated Invoice Reconciliation</h2>
             <p className="text-slate-600 mb-4">
-              Upload your master Excel sheet and a combined PDF of invoices. The AI will extract data from the PDF and validate it against your Excel records automatically.
+              Upload your master Excel sheet and a combined PDF of invoices. The AI extracts exact data from the PDF and performs a dual-verify pass against your Excel records.
             </p>
             
             <div className="grid md:grid-cols-2 gap-6 mt-6">
@@ -360,8 +354,7 @@ const App: React.FC = () => {
                 <div className="flex">
                   <div className="ml-3">
                     <p className="text-sm text-amber-700">
-                      <span className="font-bold">Viewing Historical Data.</span> You are viewing a previously processed report. 
-                      PDF-specific features (like sorting) are disabled until you re-upload the original PDF file.
+                      <span className="font-bold">Viewing Historical Data.</span> PDF-specific features (like sorting) are disabled until you re-upload the original PDF file.
                     </p>
                   </div>
                 </div>
@@ -398,7 +391,6 @@ const App: React.FC = () => {
                         <button 
                           onClick={handleDownloadSortedPdf}
                           disabled={isGeneratingPdf || loadedFromHistory}
-                          title={loadedFromHistory ? "Please re-upload PDF to use this feature" : "Download PDF with pages sorted by Excel order"}
                           className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow transition-colors
                             ${isGeneratingPdf || loadedFromHistory
                               ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
