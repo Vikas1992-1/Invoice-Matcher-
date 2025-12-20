@@ -1,6 +1,6 @@
 import React from 'react';
 import { HistoryItem } from '../types';
-import { Calendar, FileSpreadsheet, FileText, Trash2, ArrowRight, BarChart3 } from 'lucide-react';
+import { Calendar, FileSpreadsheet, FileText, Trash2, ArrowRight, Clock } from 'lucide-react';
 
 interface Props {
   items: HistoryItem[];
@@ -11,74 +11,78 @@ interface Props {
 const HistoryList: React.FC<Props> = ({ items, onSelect, onDelete }) => {
   if (items.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
-        <div className="bg-slate-50 p-4 rounded-full inline-block mb-3">
-            <Calendar className="w-8 h-8 text-slate-400" />
+      <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center">
+        <div className="bg-slate-50 p-6 rounded-2xl mb-6 shadow-inner">
+            <Clock className="w-12 h-12 text-slate-200" />
         </div>
-        <h3 className="text-lg font-medium text-slate-700">No History Yet</h3>
-        <p className="text-slate-500 mt-1">Processed invoices will appear here automatically.</p>
+        <h3 className="text-xl font-black text-[#1c2434] tracking-tight">The archive is empty</h3>
+        <p className="text-slate-400 mt-1.5 font-black uppercase tracking-[0.3em] text-[9px]">No historical data found</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid md:grid-cols-2 gap-6">
       {items.map((item) => (
         <div 
           key={item.id} 
-          className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative"
+          className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group relative flex flex-col"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Calendar className="w-4 h-4" />
-              <span>{new Date(item.timestamp).toLocaleString()}</span>
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-widest border border-slate-100 shadow-inner">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{new Date(item.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
             <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-                className="text-slate-400 hover:text-red-500 p-1 rounded-md transition-colors"
-                title="Delete from history"
+                className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                title="Purge Audit"
             >
                 <Trash2 className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex items-center gap-6 mb-4">
-             <div className="flex items-center gap-2">
-                 <FileSpreadsheet className="w-4 h-4 text-green-600" />
-                 <span className="text-sm font-medium text-slate-800 truncate max-w-[150px]" title={item.excelFileName}>{item.excelFileName}</span>
+          <div className="space-y-4 mb-8">
+             <div className="flex items-center gap-4">
+                 <div className="p-2.5 bg-emerald-50 rounded-xl shadow-sm border border-emerald-100">
+                    <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                 </div>
+                 <div className="min-w-0">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reference Dataset</p>
+                    <p className="text-sm font-black text-[#1c2434] truncate" title={item.excelFileName}>{item.excelFileName}</p>
+                 </div>
              </div>
-             <div className="flex items-center gap-2">
-                 <FileText className="w-4 h-4 text-purple-600" />
-                 <span className="text-sm font-medium text-slate-800 truncate max-w-[150px]" title={item.pdfFileName}>{item.pdfFileName}</span>
+             <div className="flex items-center gap-4">
+                 <div className="p-2.5 bg-[#1c2434]/5 rounded-xl shadow-sm border border-[#1c2434]/10">
+                    <FileText className="w-5 h-5 text-[#1c2434]" />
+                 </div>
+                 <div className="min-w-0">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Source Material</p>
+                    <p className="text-sm font-black text-[#1c2434] truncate" title={item.pdfFileName}>{item.pdfFileName}</p>
+                 </div>
              </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 mb-5">
-             <div className="bg-slate-50 p-2 rounded text-center">
-                <span className="block text-xs text-slate-500 uppercase">Total</span>
-                <span className="font-bold text-slate-700">{item.stats.totalExcel}</span>
-             </div>
-             <div className="bg-green-50 p-2 rounded text-center">
-                <span className="block text-xs text-green-600 uppercase">Match</span>
-                <span className="font-bold text-green-700">{item.stats.matched}</span>
-             </div>
-             <div className="bg-amber-50 p-2 rounded text-center">
-                <span className="block text-xs text-amber-600 uppercase">Mismatch</span>
-                <span className="font-bold text-amber-700">{item.stats.mismatches}</span>
-             </div>
-             <div className="bg-red-50 p-2 rounded text-center">
-                <span className="block text-xs text-red-600 uppercase">Missing</span>
-                <span className="font-bold text-red-700">{item.stats.missing}</span>
-             </div>
+          <div className="grid grid-cols-4 gap-3 mb-8 mt-auto bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-inner">
+             {[
+                 { label: "All", val: item.stats.totalExcel, bg: "text-slate-600" },
+                 { label: "OK", val: item.stats.matched, bg: "text-emerald-600" },
+                 { label: "Diff", val: item.stats.mismatches, bg: "text-amber-600" },
+                 { label: "Gap", val: item.stats.missing, bg: "text-red-600" },
+             ].map((stat, i) => (
+                 <div key={i} className="text-center">
+                    <span className="block text-[7px] font-black uppercase tracking-[0.1em] opacity-40 leading-tight mb-1">{stat.label}</span>
+                    <span className={`font-black text-base tracking-tighter ${stat.bg}`}>{stat.val}</span>
+                 </div>
+             ))}
           </div>
 
           <button 
             onClick={() => onSelect(item)}
-            className="w-full py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="w-full h-12 bg-[#1c2434] text-white hover:bg-[#1c2434]/95 font-black rounded-xl transition-all flex items-center justify-center gap-4 shadow-xl shadow-[#1c2434]/15 group-hover:scale-[1.01] active:scale-[0.99]"
           >
-             <BarChart3 className="w-4 h-4" />
-             View Report
-             <ArrowRight className="w-4 h-4 ml-1 opacity-60" />
+             <span className="text-xs text-[#f4cc2a] uppercase tracking-widest">Restore Audit</span>
+             <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
           </button>
         </div>
       ))}

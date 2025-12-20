@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InvoiceComparisonResult } from '../types';
-import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion, ArrowRight } from 'lucide-react';
 
 interface Props {
   result: InvoiceComparisonResult;
@@ -11,10 +11,10 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'MATCH': return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'MATCH': return <CheckCircle className="w-5 h-5 text-emerald-500" />;
       case 'MISMATCH': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case 'MISSING_IN_PDF': return <FileQuestion className="w-5 h-5 text-red-500" />;
-      case 'MISSING_IN_EXCEL': return <FileQuestion className="w-5 h-5 text-blue-500" />;
+      case 'MISSING_IN_PDF': return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'MISSING_IN_EXCEL': return <FileQuestion className="w-5 h-5 text-[#1c2434]" />;
       default: return <XCircle className="w-5 h-5 text-gray-400" />;
     }
   };
@@ -22,114 +22,126 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'MATCH': return 'Perfect Match';
-      case 'MISMATCH': return 'Discrepancy Found';
-      case 'MISSING_IN_PDF': return 'Missing in PDF';
-      case 'MISSING_IN_EXCEL': return 'Extra in PDF';
-      default: return status;
+      case 'MISMATCH': return 'There is a difference';
+      case 'MISSING_IN_PDF': return 'Not in the PDF';
+      case 'MISSING_IN_EXCEL': return 'Extra Invoice';
+      default: return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase().replace(/_/g, ' ');
     }
   };
 
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'MATCH': return 'bg-green-50 border-green-200';
-      case 'MISMATCH': return 'bg-amber-50 border-amber-200';
-      case 'MISSING_IN_PDF': return 'bg-red-50 border-red-200';
-      case 'MISSING_IN_EXCEL': return 'bg-blue-50 border-blue-200';
-      default: return 'bg-gray-50 border-gray-200';
+      case 'MATCH': return 'hover:border-emerald-200';
+      case 'MISMATCH': return 'hover:border-amber-200';
+      case 'MISSING_IN_PDF': return 'hover:border-red-200';
+      case 'MISSING_IN_EXCEL': return 'hover:border-[#1c2434]/20';
+      default: return 'hover:border-slate-300';
     }
   };
 
   return (
-    <div className={`mb-3 border rounded-lg overflow-hidden transition-all ${getStatusClass(result.status)}`}>
+    <div className={`mb-3 bg-white border border-slate-100 rounded-2xl overflow-hidden transition-all shadow-sm ${expanded ? 'shadow-xl border-slate-200' : getStatusClass(result.status)}`}>
       <div 
-        className="p-4 flex items-center justify-between cursor-pointer hover:bg-opacity-75"
+        className="p-5 flex items-center justify-between cursor-pointer group select-none"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-center gap-3">
-          {getStatusIcon(result.status)}
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-inner ${
+              result.status === 'MATCH' ? 'bg-emerald-50' : 
+              result.status === 'MISMATCH' ? 'bg-amber-50' : 
+              'bg-slate-50'
+          }`}>
+            {getStatusIcon(result.status)}
+          </div>
           <div>
-            <h3 className="font-semibold text-gray-800">Invoice #{result.invoiceNumber}</h3>
-            <p className="text-sm text-gray-500">{getStatusText(result.status)}</p>
+            <h3 className="text-base font-black text-[#1c2434] tracking-tight">Invoice #{result.invoiceNumber}</h3>
+            <p className={`text-[9px] font-black uppercase tracking-[0.2em] mt-0.5 ${
+                 result.status === 'MATCH' ? 'text-emerald-500' : 
+                 result.status === 'MISMATCH' ? 'text-amber-600' : 
+                 'text-slate-400'
+            }`}>{getStatusText(result.status)}</p>
           </div>
         </div>
         
-        {result.status === 'MISMATCH' && (
-          <div className="flex-1 mx-4 hidden sm:block">
-             <div className="flex gap-2">
-                {result.fields.filter(f => !f.isMatch).map(f => (
-                    <span key={f.fieldName} className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
-                        {f.label}
-                    </span>
-                ))}
-             </div>
-          </div>
-        )}
+        <div className="flex items-center gap-6">
+            {result.status === 'MISMATCH' && !expanded && (
+                <div className="hidden lg:flex gap-1.5">
+                    {result.fields.filter(f => !f.isMatch).slice(0, 2).map(f => (
+                        <span key={f.fieldName} className="px-2.5 py-1 text-[8px] font-black text-amber-700 bg-amber-50 border border-amber-100 rounded-lg uppercase tracking-tight">
+                            {f.label}
+                        </span>
+                    ))}
+                </div>
+            )}
 
-        <button className="text-gray-400 hover:text-gray-600">
-          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-        </button>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${expanded ? 'bg-[#1c2434] text-[#f4cc2a] shadow-lg shadow-[#1c2434]/15' : 'bg-slate-50 text-slate-400 group-hover:bg-[#1c2434] group-hover:text-[#f4cc2a]'}`}>
+                {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
+        </div>
       </div>
 
-      {expanded && result.fields.length > 0 && result.status !== 'MISSING_IN_PDF' && result.status !== 'MISSING_IN_EXCEL' && (
-        <div className="bg-white border-t p-4">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <th className="px-4 py-2">Field</th>
-                  <th className="px-4 py-2 text-blue-700 bg-blue-50">Excel Value</th>
-                  <th className="px-4 py-2 text-purple-700 bg-purple-50">PDF Extracted</th>
-                  <th className="px-4 py-2 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {result.fields.map((field) => (
-                  <tr key={field.fieldName} className={!field.isMatch ? 'bg-red-50' : ''}>
-                    <td className="px-4 py-3 font-medium text-gray-700">{field.label}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono">{field.excelValue !== undefined ? String(field.excelValue) : <span className="text-gray-300">-</span>}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono">{field.pdfValue !== undefined ? String(field.pdfValue) : <span className="text-gray-300">-</span>}</td>
-                    <td className="px-4 py-3 text-center">
-                      {field.isMatch ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Match
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Mismatch
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {expanded && (
+        <div className="bg-slate-50/50 border-t border-slate-100 p-6 animate-in slide-in-from-top-4 duration-300">
+          {result.fields.length > 0 && result.status !== 'MISSING_IN_PDF' && result.status !== 'MISSING_IN_EXCEL' ? (
+            <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                <table className="min-w-full text-sm divide-y divide-slate-100">
+                <thead className="bg-[#1c2434]">
+                    <tr className="text-left text-[9px] font-black text-white/50 uppercase tracking-[0.2em]">
+                    <th className="px-6 py-4">Checking</th>
+                    <th className="px-6 py-4 text-[#f4cc2a]">Excel List</th>
+                    <th className="px-6 py-4 text-[#f4cc2a]">PDF Data</th>
+                    <th className="px-6 py-4 text-center">Result</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                    {result.fields.map((field) => (
+                    <tr key={field.fieldName} className={`transition-all ${!field.isMatch ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
+                        <td className="px-6 py-4 font-black text-[#1c2434] text-xs">{field.label}</td>
+                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{field.excelValue !== undefined ? String(field.excelValue) : '—'}</td>
+                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px] font-black">{field.pdfValue !== undefined ? String(field.pdfValue) : '—'}</td>
+                        <td className="px-6 py-4 text-center">
+                        {field.isMatch ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-tight border border-emerald-100">
+                            OK
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-red-100 text-red-800 uppercase tracking-tight border border-red-100">
+                            Mismatch
+                            </span>
+                        )}
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+          ) : (
+             <div className="flex flex-col items-center py-8 text-center">
+                <div className="p-6 bg-slate-50 rounded-2xl mb-6 shadow-inner">
+                    <ArrowRight className="w-8 h-8 text-slate-300 rotate-90" />
+                </div>
+                <h4 className="text-lg font-black text-[#1c2434] tracking-tighter mb-2">Item Missing</h4>
+                <p className="text-xs text-slate-500 max-w-xs font-medium leading-relaxed">
+                    {result.status === 'MISSING_IN_PDF' 
+                        ? "This item is in your Excel list, but we could not find it in the PDF." 
+                        : "We found this invoice in the PDF, but it is not in your Excel list."}
+                </p>
+                
+                {result.status === 'MISSING_IN_PDF' && (
+                    <div className="mt-8 flex gap-4">
+                         <div className="text-left px-5 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Amount Expected</p>
+                            <p className="font-mono text-sm font-black text-[#1c2434] tracking-tighter">{String(result.fields.find(f => f.fieldName === 'totalAmount')?.excelValue)}</p>
+                         </div>
+                         <div className="text-left px-5 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Date Expected</p>
+                            <p className="font-mono text-sm font-black text-[#1c2434] tracking-tighter">{String(result.fields.find(f => f.fieldName === 'invoiceDate')?.excelValue)}</p>
+                         </div>
+                    </div>
+                )}
+             </div>
+          )}
         </div>
-      )}
-      
-      {expanded && result.status === 'MISSING_IN_PDF' && (
-          <div className="bg-white border-t p-4 text-sm text-gray-600">
-              <p className="mb-2">This invoice exists in your Excel file but could not be matched to any invoice in the uploaded PDF.</p>
-              <div className="bg-slate-50 p-3 rounded border border-slate-100 inline-block">
-                 <p className="text-xs font-semibold text-slate-500 uppercase">Excel Record Details</p>
-                 <div className="grid grid-cols-2 gap-x-8 gap-y-1 mt-1">
-                    <div>
-                        <span className="text-slate-500 text-xs">Expected Total:</span> <span className="font-mono font-medium">{result.fields.find(f => f.fieldName === 'totalAmount')?.excelValue}</span>
-                    </div>
-                     <div>
-                        <span className="text-slate-500 text-xs">Expected Date:</span> <span className="font-mono font-medium">{result.fields.find(f => f.fieldName === 'invoiceDate')?.excelValue}</span>
-                    </div>
-                 </div>
-              </div>
-          </div>
-      )}
-      
-      {expanded && result.status === 'MISSING_IN_EXCEL' && (
-          <div className="bg-white border-t p-4 text-sm text-gray-600">
-              This invoice was found in the PDF but does not have a corresponding entry in the Excel file.
-              <br />
-              <span className="font-mono mt-2 block">Extracted Total: {result.fields.find(f => f.fieldName === 'totalAmount')?.pdfValue}</span>
-          </div>
       )}
     </div>
   );

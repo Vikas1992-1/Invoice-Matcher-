@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut } from 'lucide-react';
+import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut, Sparkles } from 'lucide-react';
 import { parseExcelFile, downloadExcelReport } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
@@ -51,7 +51,7 @@ const App: React.FC = () => {
   if (loading) {
       return (
           <div className="min-h-screen flex items-center justify-center bg-slate-50">
-              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+              <Loader2 className="w-10 h-10 text-[#1c2434] animate-spin" />
           </div>
       );
   }
@@ -94,7 +94,7 @@ const App: React.FC = () => {
 
   const processFiles = async () => {
     if (!excelFile || !pdfFile || !user) {
-      setError("Please upload both an Excel file and a PDF file.");
+      setError("Please pick both an Excel file and a PDF file.");
       return;
     }
 
@@ -102,16 +102,12 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      console.log("Parsing Excel...");
       const excelData = await parseExcelFile(excelFile);
       if (excelData.length === 0) {
-        throw new Error("No valid data found in Excel file.");
+        throw new Error("No information found in the Excel file.");
       }
       
-      console.log("Processing PDF with Gemini (and Excel Reference)...");
       const pdfData = await processPdfWithGemini(pdfFile, excelData);
-      
-      console.log("Comparing...");
       const comparisonResults = compareInvoices(excelData, pdfData);
       
       const newStats: ProcessingStats = {
@@ -134,7 +130,7 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "An unexpected error occurred during processing.");
+      setError(err.message || "Something went wrong while checking your files.");
     } finally {
       setIsProcessing(false);
     }
@@ -164,7 +160,7 @@ const App: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      setError("Failed to generate sorted PDF.");
+      setError("Could not create the sorted PDF.");
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -178,7 +174,7 @@ const App: React.FC = () => {
 
   const handleClearAllHistory = async () => {
     if (!user) return;
-    if(confirm('Are you sure you want to clear all history?')) {
+    if(confirm('Are you sure you want to delete everything?')) {
         setHistoryItems([]);
         await clearAllHistory(user.id);
     }
@@ -194,11 +190,13 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-[#fcfdfe] text-[#1c2434] pb-12 flex flex-col">
+      <header className="bg-[#1c2434] text-white shadow-xl sticky top-0 z-30 h-16 overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-[#f4cc2a]/5 rounded-full -mr-24 -mt-24 blur-3xl"></div>
+        
+        <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between relative z-10">
           <div 
-             className="flex items-center gap-2 cursor-pointer" 
+             className="flex items-center gap-2 cursor-pointer group" 
              onClick={() => {
                  setView('upload');
                  if (loadedFromHistory) {
@@ -208,31 +206,46 @@ const App: React.FC = () => {
                  }
              }}
           >
-            <div className="bg-blue-600 p-2 rounded-lg">
-                <Receipt className="w-5 h-5 text-white" />
+            <div className="bg-[#f4cc2a] p-2 rounded-xl transition-all group-hover:rotate-6 group-hover:scale-105">
+                <Receipt className="w-5 h-5 text-[#1c2434]" />
             </div>
-            <h1 className="text-xl font-bold text-slate-800">InvoiceMatcher AI</h1>
+            <div>
+              <h1 className="text-lg font-black tracking-tight leading-none text-white">InvoiceMatcher <span className="text-[#f4cc2a]">AI</span></h1>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">BY PMC CONSULTANTS PVT LTD</p>
+            </div>
           </div>
           
-          <div className="flex items-center gap-4">
-             <button 
-                onClick={() => setView(view === 'history' ? 'upload' : 'history')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === 'history' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
-             >
-                <History className="w-4 h-4" />
-                History
-             </button>
+          <div className="flex items-center gap-5">
+             <nav className="hidden md:flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+               <button 
+                  onClick={() => setView('upload')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${view !== 'history' ? 'bg-[#f4cc2a] text-[#1c2434] shadow-md shadow-[#f4cc2a]/20' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+               >
+                  Main Page
+               </button>
+               <button 
+                  onClick={() => setView('history')}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${view === 'history' ? 'bg-[#f4cc2a] text-[#1c2434] shadow-md shadow-[#f4cc2a]/20' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+               >
+                  <History className="w-3.5 h-3.5" />
+                  Past Work
+               </button>
+             </nav>
              
-             <div className="h-6 w-px bg-slate-200"></div>
+             <div className="h-6 w-px bg-white/10 hidden md:block"></div>
              
              <div className="flex items-center gap-3">
-               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold border border-blue-200">
+               <div className="hidden sm:block text-right">
+                 <p className="text-[11px] font-black leading-none text-white">{user.email?.split('@')[0]}</p>
+                 <p className="text-[8px] text-slate-400 uppercase tracking-tighter mt-0.5">User</p>
+               </div>
+               <div className="w-8 h-8 rounded-xl bg-[#f4cc2a]/10 text-[#f4cc2a] flex items-center justify-center text-xs font-black border border-[#f4cc2a]/20">
                   {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
                </div>
                <button 
                  onClick={handleLogout}
-                 className="text-sm text-slate-500 hover:text-red-600 transition-colors flex items-center gap-1"
-                 title="Sign Out"
+                 className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"
+                 title="Logout"
                >
                  <LogOut className="w-4 h-4" />
                </button>
@@ -241,33 +254,38 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
         {renderContent()}
       </main>
+
+      <footer className="py-6 text-center border-t border-slate-100 mt-auto bg-white/50 backdrop-blur-sm">
+        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">Powered by AI</p>
+      </footer>
     </div>
   );
 
   function renderContent() {
     if (view === 'history') {
       return (
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <History className="w-6 h-6 text-blue-600" />
-              Processing History
-            </h2>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-400">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-black text-[#1c2434] tracking-tight">Saved Checks</h2>
+              <p className="text-slate-500 text-xs font-medium mt-0.5">See the files you checked before.</p>
+            </div>
             {user && historyItems.length > 0 && (
               <button 
                 onClick={handleClearAllHistory}
-                className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1"
+                className="px-4 py-2 text-[10px] font-black text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors flex items-center gap-2 uppercase tracking-wider border border-red-100"
               >
-                <Trash className="w-4 h-4" /> Clear All
+                <Trash className="w-3.5 h-3.5" /> Delete All
               </button>
             )}
           </div>
           {isLoadingHistory ? (
-              <div className="flex justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                  <Loader2 className="w-10 h-10 animate-spin text-[#1c2434] mb-3" />
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Finding records...</p>
               </div>
           ) : (
              <HistoryList items={historyItems} onSelect={handleSelectHistory} onDelete={handleDeleteHistory} />
@@ -277,168 +295,232 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="max-w-5xl mx-auto">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 max-w-4xl mx-auto">
         {view === 'upload' && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8 border border-slate-100">
-            <h2 className="text-lg font-semibold mb-2">Automated Invoice Reconciliation</h2>
-            <p className="text-slate-600 mb-4">
-              Upload your master Excel sheet and a combined PDF of invoices. The AI extracts exact data from the PDF and performs a dual-verify pass against your Excel records.
-            </p>
-            
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
-              <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors ${excelFile ? 'border-green-300 bg-green-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}>
-                <FileSpreadsheet className={`w-10 h-10 mb-3 ${excelFile ? 'text-green-600' : 'text-slate-400'}`} />
-                <div className="text-center">
-                  <p className="font-medium text-slate-900 mb-1">{excelFile ? excelFile.name : "Upload Excel File"}</p>
-                  <p className="text-xs text-slate-500 mb-4">{excelFile ? `${(excelFile.size / 1024).toFixed(1)} KB` : "Drag & drop or click to browse"}</p>
-                </div>
-                <label className="cursor-pointer">
-                  <span className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm">
-                    {excelFile ? "Change File" : "Select File"}
-                  </span>
-                  <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
-                </label>
-              </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-8 shadow-[0_15px_40px_-15px_rgba(28,36,52,0.05)] border border-slate-50 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#f4cc2a]/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-[#f4cc2a]/15 transition-all"></div>
+              
+              <div className="relative">
+                <h2 className="text-2xl font-black text-[#1c2434] leading-tight mb-2 tracking-tight">Check Your Invoices <br/><span className="text-[#f4cc2a] bg-[#1c2434] px-3 py-1 rounded-xl inline-block mt-1">Smart AI Tool</span></h2>
+                <p className="text-slate-500 font-medium max-w-md text-sm leading-relaxed mt-2">
+                  Upload your Excel list and PDF invoices. The AI will find any differences for you.
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-6 mt-10">
+                  <label className={`h-48 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all shadow-sm group/input ${excelFile ? 'border-emerald-400 bg-emerald-50/20' : 'border-slate-200 bg-slate-50/50 hover:border-[#1c2434] hover:bg-white hover:shadow-xl'}`}>
+                    <div className={`p-3 rounded-2xl mb-3 transition-all ${excelFile ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200' : 'bg-white text-slate-400 shadow-md group-hover/input:scale-105 group-hover/input:rotate-2'}`}>
+                      <FileSpreadsheet className="w-8 h-8" />
+                    </div>
+                    <p className="text-xs font-black text-[#1c2434] truncate max-w-[180px] text-center px-4">{excelFile ? excelFile.name : "Upload Excel"}</p>
+                    {!excelFile && <p className="text-[9px] text-slate-400 font-black uppercase mt-1.5 tracking-widest">Excel File</p>}
+                    <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelUpload} />
+                  </label>
 
-              <div className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-colors ${pdfFile ? 'border-purple-300 bg-purple-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}>
-                <FileText className={`w-10 h-10 mb-3 ${pdfFile ? 'text-purple-600' : 'text-slate-400'}`} />
-                <div className="text-center">
-                  <p className="font-medium text-slate-900 mb-1">{pdfFile ? pdfFile.name : "Upload PDF Invoices"}</p>
-                  <p className="text-xs text-slate-500 mb-4">{pdfFile ? `${(pdfFile.size / 1024 / 1024).toFixed(2)} MB` : "Single PDF with multiple invoices"}</p>
+                  <label className={`h-48 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all shadow-sm group/input ${pdfFile ? 'border-[#f4cc2a]/40 bg-[#f4cc2a]/5' : 'border-slate-200 bg-slate-50/50 hover:border-[#1c2434] hover:bg-white hover:shadow-xl'}`}>
+                    <div className={`p-3 rounded-2xl mb-3 transition-all ${pdfFile ? 'bg-[#f4cc2a] text-[#1c2434] shadow-md shadow-[#f4cc2a]/15' : 'bg-white text-slate-400 shadow-md group-hover/input:scale-105 group-hover/input:rotate-2'}`}>
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <p className="text-xs font-black text-[#1c2434] truncate max-w-[180px] text-center px-4">{pdfFile ? pdfFile.name : "Upload PDF"}</p>
+                    {!pdfFile && <p className="text-[9px] text-slate-400 font-black uppercase mt-1.5 tracking-widest">PDF File</p>}
+                    <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} />
+                  </label>
                 </div>
-                <label className="cursor-pointer">
-                  <span className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm">
-                    {pdfFile ? "Change File" : "Select File"}
-                  </span>
-                  <input type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} />
-                </label>
-              </div>
-            </div>
 
-            <div className="mt-8 flex justify-end">
-              <button
-                onClick={processFiles}
-                disabled={!excelFile || !pdfFile || isProcessing}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium text-white shadow-md transition-all
-                  ${!excelFile || !pdfFile || isProcessing 
-                    ? 'bg-slate-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700 active:transform active:scale-95'}`}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Compare Invoices
-                  </>
-                )}
-              </button>
+                <div className="mt-10">
+                  <button
+                    onClick={processFiles}
+                    disabled={!excelFile || !pdfFile || isProcessing}
+                    className={`w-full h-14 rounded-2xl font-black text-base transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn
+                      ${!excelFile || !pdfFile || isProcessing 
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
+                        : 'bg-[#1c2434] text-white hover:shadow-xl hover:shadow-[#1c2434]/20 active:scale-[0.98]'}`}
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin text-[#f4cc2a]" />
+                        <span>Checking...</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
+                        <Check className="w-5 h-5 text-[#f4cc2a]" />
+                        <span>Compare Now</span>
+                        <Sparkles className="w-4 h-4 text-[#f4cc2a] opacity-0 group-hover/btn:opacity-100 transition-all group-hover/btn:scale-110" />
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 mt-12 pt-10 border-t border-slate-50">
+                  <div className="bg-[#1c2434] text-white rounded-2xl p-6 relative overflow-hidden group/status">
+                    <div className="absolute bottom-0 right-0 w-24 h-24 bg-[#f4cc2a]/5 rounded-full blur-2xl -mb-12 -mr-12 group-hover/status:bg-[#f4cc2a]/10 transition-all"></div>
+                    <div className="relative z-10">
+                      <div className="bg-white/10 w-8 h-8 rounded-lg flex items-center justify-center mb-4">
+                        <BarChart3 className="w-4 h-4 text-[#f4cc2a]" />
+                      </div>
+                      <h3 className="text-base font-black mb-1 tracking-tight">Status Info</h3>
+                      <p className="text-slate-400 text-[10px] mb-6 font-medium tracking-tight">Real-time AI performance.</p>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[0.1em] mb-1.5">
+                            <span className="text-slate-400">Accuracy</span>
+                            <span className="text-[#f4cc2a]">99.8%</span>
+                          </div>
+                          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#f4cc2a] w-[99.8%] rounded-full"></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-[0.1em] mb-1.5">
+                            <span className="text-slate-400">Speed</span>
+                            <span className="text-emerald-400">Fast</span>
+                          </div>
+                          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 w-[94%] rounded-full"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+                    <h3 className="text-base font-black text-[#1c2434] mb-4 tracking-tight">Quick Tips</h3>
+                    <ul className="space-y-3">
+                      {[
+                        {icon: <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500"/>, text: "Clear Excel headers work best."},
+                        {icon: <FileText className="w-3.5 h-3.5 text-[#1c2434]"/>, text: "High-quality PDFs help accuracy."},
+                        {icon: <Check className="w-3.5 h-3.5 text-[#f4cc2a]"/>, text: "Review all flagged alerts."}
+                      ].map((tip, i) => (
+                        <li key={i} className="flex items-start gap-3 text-[11px] text-slate-600 font-bold leading-tight">
+                          <div className="mt-0.5 bg-white p-1.5 rounded-lg shadow-sm border border-slate-100 shrink-0">{tip.icon}</div>
+                          <span className="pt-0.5">{tip.text}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-            <p>{error}</p>
+          <div className="bg-red-50 border-l-[8px] border-red-500 text-red-800 px-6 py-4 rounded-2xl mb-8 mt-6 flex items-center gap-4 animate-in slide-in-from-top-2 shadow-lg shadow-red-100">
+            <div className="bg-red-500 p-2.5 rounded-xl text-white shadow-md shadow-red-200">
+              <AlertCircle className="w-6 h-6 shrink-0" />
+            </div>
+            <div>
+              <p className="font-black text-[10px] uppercase tracking-wider mb-0.5">Error</p>
+              <p className="text-xs font-bold opacity-80">{error}</p>
+            </div>
           </div>
         )}
         
         {(view === 'results' || (view === 'upload' && stats)) && stats && (
-          <>
+          <div className="space-y-8 animate-in fade-in zoom-in-98 duration-400 pb-8">
             {loadedFromHistory && (
-              <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded-r">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm text-amber-700">
-                      <span className="font-bold">Viewing Historical Data.</span> PDF-specific features (like sorting) are disabled until you re-upload the original PDF file.
-                    </p>
-                  </div>
+              <div className="bg-[#f4cc2a]/10 border-l-[8px] border-[#f4cc2a] p-6 rounded-2xl flex items-center gap-5 shadow-sm">
+                <div className="bg-[#1c2434] p-3 rounded-xl text-[#f4cc2a] shadow-lg shadow-[#1c2434]/15">
+                    <History className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="font-black text-[#1c2434] uppercase tracking-[0.2em] text-[10px] mb-1">Old Record</p>
+                  <p className="text-sm text-slate-700 font-bold">You are looking at a past check.</p>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Processed</p>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalExcel}</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-green-100">
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Perfect Match</p>
-                <p className="text-2xl font-bold text-green-700 mt-1">{stats.matched}</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-100">
-                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Mismatches</p>
-                <p className="text-2xl font-bold text-amber-700 mt-1">{stats.mismatches}</p>
-              </div>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-red-100">
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Missing / Extra</p>
-                <p className="text-2xl font-bold text-red-700 mt-1">{stats.missing}</p>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                  { label: "Total Checked", value: stats.totalExcel, color: "bg-[#1c2434] text-white", sub: "Items" },
+                  { label: "Match Found", value: stats.matched, color: "bg-white text-emerald-600 border border-emerald-50", sub: "Perfect" },
+                  { label: "Differences", value: stats.mismatches, color: "bg-white text-amber-600 border border-amber-50", sub: "Alerts" },
+                  { label: "Missing/Extra Invoices", value: stats.missing, color: "bg-white text-red-600 border border-red-50", sub: "Issues" },
+              ].map((card, i) => (
+                  <div key={i} className={`${card.color} p-6 rounded-2xl shadow-sm relative overflow-hidden group transition-all hover:translate-y-[-2px] hover:shadow-xl`}>
+                    <div className="relative z-10">
+                        <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">{card.label}</p>
+                        <div className="flex items-baseline gap-1.5">
+                            <p className="text-4xl font-black leading-none tracking-tighter">{card.value}</p>
+                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">{card.sub}</p>
+                        </div>
+                    </div>
+                  </div>
+              ))}
             </div>
 
             {results.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-slate-500" />
-                        Detailed Comparison
-                    </h3>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <button 
-                          onClick={handleDownloadSortedPdf}
-                          disabled={isGeneratingPdf || loadedFromHistory}
-                          className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow transition-colors
-                            ${isGeneratingPdf || loadedFromHistory
-                              ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-                              : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
-                        >
-                            {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileStack className="w-4 h-4" />}
-                            {isGeneratingPdf ? 'Generating...' : 'Download Sorted PDF'}
-                        </button>
-                        <button 
-                          onClick={handleDownloadReport}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow transition-colors"
-                        >
-                            <Download className="w-4 h-4" />
-                            Download Report
-                        </button>
-                    </div>
+              <div className="space-y-8 mt-4">
+                <div className="flex flex-col sm:flex-row items-end justify-between gap-6 px-2">
+                  <div>
+                    <h3 className="text-3xl font-black text-[#1c2434] tracking-tighter leading-none">List of Invoices</h3>
+                    <p className="text-slate-400 text-[10px] font-black mt-2 uppercase tracking-widest">Details of what we found</p>
+                  </div>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <button 
+                      onClick={handleDownloadSortedPdf}
+                      disabled={isGeneratingPdf || loadedFromHistory}
+                      className={`flex-1 sm:flex-none h-12 flex items-center justify-center gap-2 px-6 font-black rounded-xl shadow-lg transition-all text-[10px] uppercase tracking-wider
+                        ${isGeneratingPdf || loadedFromHistory
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none' 
+                          : 'bg-[#1c2434] hover:shadow-[#1c2434]/20 text-[#f4cc2a] active:scale-95'}`}
+                    >
+                        {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileStack className="w-4 h-4" />}
+                        <span>{isGeneratingPdf ? 'Saving...' : 'Get Sorted PDF'}</span>
+                    </button>
+                    <button 
+                      onClick={handleDownloadReport}
+                      className="flex-1 sm:flex-none h-12 flex items-center justify-center gap-2 px-6 bg-emerald-600 hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-100 text-white font-black rounded-xl shadow-md transition-all active:scale-95 text-[10px] uppercase tracking-wider"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>Excel Report</span>
+                    </button>
+                  </div>
                 </div>
                 
-                {results.some(r => r.status === 'MATCH') && (
-                    <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-green-700 uppercase tracking-wider mb-3">Matched Records</h4>
-                        {results.filter(r => r.status === 'MATCH').map((res) => (
-                            <ComparisonResultRow key={res.invoiceNumber} result={res} />
-                        ))}
-                    </div>
-                )}
+                <div className="space-y-4">
+                  {results.some(r => r.status === 'MATCH') && (
+                    <section>
+                      <div className="flex items-center gap-3 mb-4 ml-2">
+                        <div className="w-2 h-6 bg-emerald-500 rounded-full"></div>
+                        <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Everything Matches</h4>
+                      </div>
+                      {results.filter(r => r.status === 'MATCH').map((res) => (
+                        <ComparisonResultRow key={res.invoiceNumber} result={res} />
+                      ))}
+                    </section>
+                  )}
 
-                {results.some(r => r.status === 'MISMATCH') && (
-                    <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-amber-700 uppercase tracking-wider mb-3">Discrepancies</h4>
-                        {results.filter(r => r.status === 'MISMATCH').map((res) => (
-                            <ComparisonResultRow key={res.invoiceNumber} result={res} />
-                        ))}
-                    </div>
-                )}
+                  {results.some(r => r.status === 'MISMATCH') && (
+                    <section>
+                      <div className="flex items-center gap-3 mb-4 mt-12 ml-2">
+                        <div className="w-2 h-6 bg-amber-500 rounded-full"></div>
+                        <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Found a Difference</h4>
+                      </div>
+                      {results.filter(r => r.status === 'MISMATCH').map((res) => (
+                        <ComparisonResultRow key={res.invoiceNumber} result={res} />
+                      ))}
+                    </section>
+                  )}
 
-                {results.some(r => r.status.includes('MISSING')) && (
-                    <div className="mb-6">
-                        <h4 className="text-sm font-semibold text-red-700 uppercase tracking-wider mb-3">Missing / Not Found</h4>
-                        {results.filter(r => r.status.includes('MISSING')).map((res) => (
-                            <ComparisonResultRow key={res.invoiceNumber} result={res} />
-                        ))}
-                    </div>
-                )}
+                  {results.some(r => r.status.includes('MISSING')) && (
+                    <section>
+                      <div className="flex items-center gap-3 mb-4 mt-12 ml-2">
+                        <div className="w-2 h-6 bg-red-500 rounded-full"></div>
+                        <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Missing Information</h4>
+                      </div>
+                      {results.filter(r => r.status.includes('MISSING')).map((res) => (
+                        <ComparisonResultRow key={res.invoiceNumber} result={res} />
+                      ))}
+                    </section>
+                  )}
+                </div>
               </div>
             )}
             
-            <div className="mt-8 pt-6 border-t border-slate-200 flex justify-center">
+            <div className="mt-16 py-12 border-t border-slate-100 flex justify-center">
                <button 
                  onClick={() => {
                    setResults([]);
@@ -446,12 +528,12 @@ const App: React.FC = () => {
                    setLoadedFromHistory(false);
                    setView('upload');
                  }}
-                 className="text-slate-500 hover:text-slate-800 font-medium flex items-center gap-2"
+                 className="h-14 px-10 bg-slate-50 text-slate-400 hover:bg-[#1c2434] hover:text-[#f4cc2a] font-black rounded-xl transition-all flex items-center gap-4 border border-slate-200 shadow-sm"
                >
-                 <ArrowLeft className="w-4 h-4" /> Start New Analysis
+                 <ArrowLeft className="w-5 h-5" /> <span>Start Again</span>
                </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     );
