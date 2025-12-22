@@ -225,7 +225,7 @@ const Login: React.FC = () => {
                   }}
                   className="font-black text-[#1c2434] hover:text-[#f4cc2a] transition-all underline underline-offset-4 decoration-[#f4cc2a]/30"
                 >
-                  {isLogin ? 'Join the Waitlist' : 'Login instead'}
+                  {isLogin ? 'Signup' : 'Login instead'}
                 </button>
               </p>
             </div>
