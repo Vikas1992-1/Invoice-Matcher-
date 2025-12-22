@@ -41,7 +41,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export const processPdfWithGemini = async (pdfFile: File, excelReference: InvoiceData[]): Promise<InvoiceData[]> => {
+export const processPdfWithGemini = async (pdfFile: File, excelReference?: InvoiceData[]): Promise<InvoiceData[]> => {
   try {
     const base64Data = await fileToBase64(pdfFile);
     
@@ -51,14 +51,17 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference: Invoic
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    const excelRefText = excelReference.map(inv => 
-        `Expected Inv: ${inv.invoiceNumber}, Date: ${inv.invoiceDate}, Base/Taxable: ${inv.taxableAmount}, Total: ${inv.totalAmount}, CGST: ${inv.cgstAmount || 0}, SGST: ${inv.sgstAmount || 0}, IGST: ${inv.igstAmount || 0}`
-    ).join('\n');
+    let excelRefText = "";
+    if (excelReference && excelReference.length > 0) {
+        excelRefText = "Reference Excel Data (Ground Truth for Comparison):\n" + 
+            excelReference.map(inv => 
+                `Expected Inv: ${inv.invoiceNumber}, Date: ${inv.invoiceDate}, Base/Taxable: ${inv.taxableAmount}, Total: ${inv.totalAmount}, CGST: ${inv.cgstAmount || 0}, SGST: ${inv.sgstAmount || 0}, IGST: ${inv.igstAmount || 0}`
+            ).join('\n');
+    }
 
     const prompt = `
       You are a high-precision financial auditor. The PDF contains multiple invoices.
       
-      Reference Excel Data (Ground Truth for Comparison):
       ${excelRefText}
 
       Instructions:
@@ -66,11 +69,7 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference: Invoic
       2. Exact Invoice Number: Capture the invoice ID literal string exactly.
       3. Digital Signatures: Mark 'has_signature' as 'yes' if you see handwritten signatures, physical stamps, or digital signatures (text like "digitally signed by", "DS", or QR code signatures).
       4. Taxable Amount: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'. It is the sum of items before GST.
-      5. Recheck Mismatch Data: 
-         - Compare your extracted data against the reference excel data. 
-         - If extracted 'Taxable Amount' (base amount) or 'Total Amount' differs from reference, re-read carefully.
-         - Pay special attention to tax components (CGST, SGST, IGST).
-      6. Precision: Ensure no numbers are skipped.
+      5. Precision: Ensure no numbers are skipped. If you are comparing against reference data, ensure your extraction is as accurate as possible.
     `;
 
     const response = await ai.models.generateContent({

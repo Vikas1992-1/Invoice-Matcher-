@@ -160,3 +160,33 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
 
   XLSX.writeFile(workbook, `Invoice_Reconciliation_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
+
+export const downloadExtractionReport = (data: InvoiceData[]) => {
+  const exportData = data.map(item => ({
+    "Vendor Name": item.vendorName,
+    "GST Number": item.gstNumber,
+    "PMC/Consultant GST": item.pmcConsultantGst || '',
+    "Invoice Number": item.invoiceNumber,
+    "Invoice Date": item.invoiceDate,
+    "Taxable (Base) Amount": item.taxableAmount,
+    "CGST": item.cgstAmount || 0,
+    "SGST": item.sgstAmount || 0,
+    "IGST": item.igstAmount || 0,
+    "GST Amount": item.gstAmount || 0,
+    "Total Amount": item.totalAmount,
+    "Reverse Charge": item.reverseCharge || 'no',
+    "HSN Code": item.hsnCode || '',
+    "Invoice Type": item.invoiceType || '',
+    "Signature Present": item.hasSignature || 'no',
+    "Pages": `${item.pageRange?.start || 1} - ${item.pageRange?.end || 1}`
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const colWidths = Object.keys(exportData[0] || {}).map(key => ({ wch: key.length + 8 }));
+  worksheet['!cols'] = colWidths;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Extraction Report");
+
+  XLSX.writeFile(workbook, `PDF_Extraction_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
