@@ -4,6 +4,26 @@ import { InvoiceData, InvoiceComparisonResult } from '../types';
 // Helper to normalize strings for cleaner keys
 const normalizeKey = (key: string) => key.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
 
+/**
+ * Helper to format values for reports.
+ * Handles placeholders and string transformations.
+ */
+export const formatReportValue = (
+  value: any, 
+  placeholder: string = 'N/a', 
+  transform: 'none' | 'upper' | 'capitalize' = 'none'
+): string => {
+  if (value === undefined || value === null) return placeholder;
+  let strVal = String(value).trim();
+  if (strVal === '' || strVal.toLowerCase() === 'unknown' || strVal.toLowerCase() === 'none') return placeholder;
+  
+  if (transform === 'upper') return strVal.toUpperCase();
+  if (transform === 'capitalize') {
+    return strVal.charAt(0).toUpperCase() + strVal.slice(1).toLowerCase();
+  }
+  return strVal;
+};
+
 export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -116,10 +136,10 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "GST Match": getMatchStatus('gstNumber'),
       
       "PMC Consultant GST (PDF)": pdf.pmcConsultantGst || '',
-      "Reverse Charge (PDF)": pdf.reverseCharge || '',
-      "HSN Code (PDF)": pdf.hsnCode || '',
+      "Reverse Charge (PDF)": formatReportValue(pdf.reverseCharge, 'N/a', 'capitalize'),
+      "HSN Code (PDF)": formatReportValue(pdf.hsnCode, 'N/a', 'upper'),
       "Invoice Type (PDF)": pdf.invoiceType || '',
-      "Signature Present (PDF)": pdf.hasSignature || '',
+      "Signature Present (PDF)": formatReportValue(pdf.hasSignature, 'N/a', 'capitalize'),
 
       "Invoice Number (Excel)": excel.invoiceNumber || (r.status === 'MISSING_IN_PDF' ? r.invoiceNumber : ''),
       "Invoice Number (PDF)": pdf.invoiceNumber || (r.status === 'MISSING_IN_EXCEL' ? r.invoiceNumber : ''),
@@ -174,10 +194,10 @@ export const downloadExtractionReport = (data: InvoiceData[]) => {
     "IGST": item.igstAmount || 0,
     "GST Amount": item.gstAmount || 0,
     "Total Amount": item.totalAmount,
-    "Reverse Charge": item.reverseCharge || 'no',
-    "HSN Code": item.hsnCode || '',
+    "Reverse Charge": formatReportValue(item.reverseCharge, 'N/a', 'capitalize'),
+    "HSN Code": formatReportValue(item.hsnCode, 'N/a', 'upper'),
     "Invoice Type": item.invoiceType || '',
-    "Signature Present": item.hasSignature || 'no',
+    "Signature Present": formatReportValue(item.hasSignature, 'N/a', 'capitalize'),
     "Pages": `${item.pageRange?.start || 1} - ${item.pageRange?.end || 1}`
   }));
 

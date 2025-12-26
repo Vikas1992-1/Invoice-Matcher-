@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut, Sparkles, ScanText, TableProperties } from 'lucide-react';
-import { parseExcelFile, downloadExcelReport, downloadExtractionReport } from './services/excelService';
+import { parseExcelFile, downloadExcelReport, downloadExtractionReport, formatReportValue } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
 import { compareInvoices } from './utils/comparator';
@@ -454,6 +454,8 @@ const App: React.FC = () => {
                       <th className="px-6 py-4 text-[#f4cc2a]">Date</th>
                       <th className="px-6 py-4 text-[#f4cc2a] text-right">Taxable Amt</th>
                       <th className="px-6 py-4 text-[#f4cc2a] text-right">Total Amt</th>
+                      <th className="px-6 py-4">HSN</th>
+                      <th className="px-6 py-4">Reverse Charge</th>
                       <th className="px-6 py-4 text-center">Pages</th>
                     </tr>
                   </thead>
@@ -465,6 +467,12 @@ const App: React.FC = () => {
                         <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{item.invoiceDate}</td>
                         <td className="px-6 py-4 text-right font-mono text-[10px] font-bold text-slate-700">{item.taxableAmount.toLocaleString()}</td>
                         <td className="px-6 py-4 text-right font-mono text-[10px] font-black text-[#1c2434]">{item.totalAmount.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-mono text-[10px] uppercase text-slate-500">
+                          {formatReportValue(item.hsnCode, 'N/a', 'upper')}
+                        </td>
+                        <td className="px-6 py-4 text-[10px] font-black text-brand uppercase">
+                          {formatReportValue(item.reverseCharge, 'N/a', 'capitalize')}
+                        </td>
                         <td className="px-6 py-4 text-center">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-black bg-slate-100 text-slate-500 uppercase tracking-tight">
                             {item.pageRange?.start} - {item.pageRange?.end}

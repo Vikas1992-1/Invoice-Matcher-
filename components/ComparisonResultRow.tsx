@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { InvoiceComparisonResult } from '../types';
 import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion, ArrowRight } from 'lucide-react';
+import { formatReportValue } from '../services/excelService';
 
 interface Props {
   result: InvoiceComparisonResult;
@@ -82,6 +83,27 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
 
       {expanded && (
         <div className="bg-slate-50/50 border-t border-slate-100 p-6 animate-in slide-in-from-top-4 duration-300">
+          {result.extractedData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-xl border shadow-sm">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">HSN Code (PDF)</p>
+                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.hsnCode, 'N/a', 'upper')}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border shadow-sm">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Reverse Charge (PDF)</p>
+                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.reverseCharge, 'N/a', 'capitalize')}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border shadow-sm">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Signature Found (PDF)</p>
+                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.hasSignature, 'No', 'capitalize')}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border shadow-sm">
+                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Page Range</p>
+                   <p className="text-sm font-black text-brand">{result.extractedData.pageRange?.start || 'N/a'} - {result.extractedData.pageRange?.end || result.extractedData.pageRange?.start || 'N/a'}</p>
+                </div>
+              </div>
+          )}
+
           {result.fields.length > 0 && result.status !== 'MISSING_IN_PDF' && result.status !== 'MISSING_IN_EXCEL' ? (
             <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
                 <table className="min-w-full text-sm divide-y divide-slate-100">

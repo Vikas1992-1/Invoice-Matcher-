@@ -11,7 +11,7 @@ const INVOICE_SCHEMA: Schema = {
       gst_number: { type: Type.STRING, description: "GSTIN or tax ID of the vendor." },
       pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/tax ID specifically labeled for a PMC (Project Management Consultant) or secondary consultant, if present." },
       reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Return 'yes' or 'no'." },
-      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items." },
+      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items. If not explicitly stated for an invoice, leave as an empty string." },
       invoice_type: { type: Type.STRING, description: "Document type (e.g., tax invoice, e-invoice, credit note)." },
       has_signature: { type: Type.STRING, description: "Return 'yes' if there is a handwritten signature, stamp, or digital signature (e.g., 'digitally signed by', 'ds', digital certificate markers, or signature QR codes). Otherwise 'no'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
@@ -69,7 +69,8 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
       2. Exact Invoice Number: Capture the invoice ID literal string exactly.
       3. Digital Signatures: Mark 'has_signature' as 'yes' if you see handwritten signatures, physical stamps, or digital signatures (text like "digitally signed by", "DS", or QR code signatures).
       4. Taxable Amount: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'. It is the sum of items before GST.
-      5. Precision: Ensure no numbers are skipped. If you are comparing against reference data, ensure your extraction is as accurate as possible.
+      5. HSN Code: Only extract HSN/SAC codes if they are explicitly printed on the document. If they are not present, return an empty string. Do not invent or guess HSN codes.
+      6. Precision: Ensure no numbers are skipped. If you are comparing against reference data, ensure your extraction is as accurate as possible.
     `;
 
     const response = await ai.models.generateContent({
