@@ -69,7 +69,10 @@ const Login: React.FC = () => {
               <div className="bg-[#f4cc2a] p-2 rounded-xl shadow-lg shadow-[#f4cc2a]/20">
                 <Receipt className="w-6 h-6 text-[#1c2434]" />
               </div>
-              <h1 className="text-xl font-black tracking-tight">InvoiceMatcher <span className="text-[#f4cc2a]">AI</span></h1>
+              <div>
+                <h1 className="text-xl font-black tracking-tight">InvoiceMatcher <span className="text-[#f4cc2a]">AI</span></h1>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">By PMC Consultants Private Limited</p>
+              </div>
             </div>
 
             <h2 className="text-3xl md:text-4xl font-black leading-tight mb-6 tracking-tight">
