@@ -5,6 +5,38 @@ import { InvoiceData, InvoiceComparisonResult } from '../types';
 const normalizeKey = (key: string) => key.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
 
 /**
+ * Helper to format date strings to DD-MM-YYYY
+ */
+export const formatDateToDisplay = (dateStr: string): string => {
+  if (!dateStr || dateStr === 'Unknown') return '';
+  const clean = dateStr.trim().replace(/\//g, '-');
+  
+  // If already DD-MM-YYYY
+  if (/^\d{2}-\d{2}-\d{4}$/.test(clean)) return clean;
+
+  // Handle YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    const [y, m, d] = clean.split('-');
+    return `${d}-${m}-${y}`;
+  }
+
+  // Handle general parts split
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    // case: D-M-YYYY or DD-MM-YYYY
+    if (parts[2].length === 4) {
+      return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+    }
+    // case: YYYY-MM-DD
+    if (parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+    }
+  }
+
+  return clean;
+};
+
+/**
  * Helper to format values for reports.
  * Handles placeholders and string transformations.
  */
@@ -38,22 +70,16 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
         const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
         
         const invoices: InvoiceData[] = jsonData.map((row: any) => {
-            // Map keys flexibly based on user description
-            
             // Helper to find value by loosely matching key (contains)
             const findVal = (keywords: string[]): any => {
                 const key = Object.keys(row).find(k => keywords.some(kw => normalizeKey(k).includes(normalizeKey(kw))));
                 return key ? row[key] : undefined;
             };
 
-            // Helper for stricter matching (exact or starts with)
             const findValStrict = (keywords: string[]): any => {
                 const key = Object.keys(row).find(k => {
                     const normK = normalizeKey(k);
-                    return keywords.some(kw => {
-                        const normKw = normalizeKey(kw);
-                        return normK === normKw;
-                    });
+                    return keywords.some(kw => normalizeKey(kw) === normK);
                 });
                 return key ? row[key] : undefined;
             };
@@ -61,12 +87,11 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
             const invoiceDateRaw = findVal(['invoice date', 'date']);
             let invoiceDateStr = '';
             
-            // Handle Excel serial date
             if (typeof invoiceDateRaw === 'number') {
                 const date = XLSX.SSF.parse_date_code(invoiceDateRaw);
-                invoiceDateStr = `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+                invoiceDateStr = `${String(date.d).padStart(2, '0')}-${String(date.m).padStart(2, '0')}-${date.y}`;
             } else {
-                invoiceDateStr = String(invoiceDateRaw || '');
+                invoiceDateStr = formatDateToDisplay(String(invoiceDateRaw || ''));
             }
 
             return {
@@ -75,14 +100,11 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
                 gstNumber: String(findVal(['gst number', 'gst']) || '').trim(),
                 invoiceNumber: String(findVal(['invoice number', 'inv no', 'invoice #']) || '').trim(),
                 invoiceDate: invoiceDateStr,
-                // Explicitly prioritizing 'Base Amount' as requested
                 taxableAmount: parseFloat(String(findVal(['base amount', 'taxable amount', 'gross amount', 'taxable']) || '0').replace(/,/g, '')),
                 gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount', 'total tax']) || '0').replace(/,/g, '')),
-                
                 cgstAmount: parseFloat(String(findVal(['cgst', 'cgst amount', 'central tax']) || '0').replace(/,/g, '')),
                 sgstAmount: parseFloat(String(findVal(['sgst', 'sgst amount', 'state tax', 'utgst']) || '0').replace(/,/g, '')),
                 igstAmount: parseFloat(String(findVal(['igst', 'igst amount', 'integrated tax']) || '0').replace(/,/g, '')),
-
                 totalAmount: parseFloat(String(findVal(['invoice amount', 'total amount', 'total']) || '0').replace(/,/g, '')),
                 branch: String(findVal(['branch']) || ''),
                 description: String(findVal(['description']) || ''),

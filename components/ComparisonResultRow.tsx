@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InvoiceComparisonResult } from '../types';
 import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion, ArrowRight } from 'lucide-react';
-import { formatReportValue } from '../services/excelService';
+import { formatReportValue, formatDateToDisplay } from '../services/excelService';
 
 interface Props {
   result: InvoiceComparisonResult;
@@ -116,24 +116,35 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                    {result.fields.map((field) => (
-                    <tr key={field.fieldName} className={`transition-all ${!field.isMatch ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
-                        <td className="px-6 py-4 font-black text-[#1c2434] text-xs">{field.label}</td>
-                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{field.excelValue !== undefined ? String(field.excelValue) : '—'}</td>
-                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px] font-black">{field.pdfValue !== undefined ? String(field.pdfValue) : '—'}</td>
-                        <td className="px-6 py-4 text-center">
-                        {field.isMatch ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-tight border border-emerald-100">
-                            OK
-                            </span>
-                        ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-red-100 text-red-800 uppercase tracking-tight border border-red-100">
-                            Mismatch
-                            </span>
-                        )}
-                        </td>
-                    </tr>
-                    ))}
+                    {result.fields.map((field) => {
+                      let excelVal = field.excelValue !== undefined ? String(field.excelValue) : '—';
+                      let pdfVal = field.pdfValue !== undefined ? String(field.pdfValue) : '—';
+                      
+                      // Explicit format for date fields
+                      if (field.fieldName === 'invoiceDate') {
+                        if (field.excelValue) excelVal = formatDateToDisplay(String(field.excelValue));
+                        if (field.pdfValue) pdfVal = formatDateToDisplay(String(field.pdfValue));
+                      }
+
+                      return (
+                        <tr key={field.fieldName} className={`transition-all ${!field.isMatch ? 'bg-red-50/40' : 'hover:bg-slate-50'}`}>
+                            <td className="px-6 py-4 font-black text-[#1c2434] text-xs">{field.label}</td>
+                            <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{excelVal}</td>
+                            <td className="px-6 py-4 text-slate-500 font-mono text-[10px] font-black">{pdfVal}</td>
+                            <td className="px-6 py-4 text-center">
+                            {field.isMatch ? (
+                                <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-tight border border-emerald-100">
+                                OK
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black bg-red-100 text-red-800 uppercase tracking-tight border border-red-100">
+                                Mismatch
+                                </span>
+                            )}
+                            </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
                 </table>
             </div>
@@ -157,7 +168,7 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
                          </div>
                          <div className="text-left px-5 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Date Expected</p>
-                            <p className="font-mono text-sm font-black text-[#1c2434] tracking-tighter">{String(result.fields.find(f => f.fieldName === 'invoiceDate')?.excelValue)}</p>
+                            <p className="font-mono text-sm font-black text-[#1c2434] tracking-tighter">{formatDateToDisplay(String(result.fields.find(f => f.fieldName === 'invoiceDate')?.excelValue))}</p>
                          </div>
                     </div>
                 )}

@@ -1,4 +1,5 @@
 import { InvoiceData, InvoiceComparisonResult, ComparisonField } from '../types';
+import { formatDateToDisplay } from '../services/excelService';
 
 // Helper to sanitize strings for loose comparison
 const cleanString = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -17,17 +18,9 @@ const compareNumbers = (num1: number, num2: number, epsilon = 1.0): boolean => {
   return Math.abs(num1 - num2) <= epsilon;
 };
 
-// Normalize date strings for comparison
-const normalizeDate = (dateStr: string): string => {
-    if (!dateStr) return '';
-    const clean = dateStr.replace(/\//g, '-');
-    const parts = clean.split('-');
-    if (parts.length === 3) {
-        if (parts[2].length === 4) {
-            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-    }
-    return clean;
+// Normalize date strings for comparison by converting to DD-MM-YYYY string for strict matching
+const normalizeDateForComparison = (dateStr: string): string => {
+    return formatDateToDisplay(dateStr);
 };
 
 export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]): InvoiceComparisonResult[] => {
@@ -73,13 +66,12 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
       {
         fieldName: 'invoiceDate',
         label: 'Invoice Date',
-        excelValue: excelInv.invoiceDate,
-        pdfValue: pdfInv.invoiceDate,
-        isMatch: normalizeDate(excelInv.invoiceDate) === normalizeDate(pdfInv.invoiceDate)
+        excelValue: excelInv.invoiceDate, // Already formatted in parseExcelFile
+        pdfValue: pdfInv.invoiceDate,   // Already formatted in geminiService
+        isMatch: normalizeDateForComparison(excelInv.invoiceDate) === normalizeDateForComparison(pdfInv.invoiceDate)
       },
       {
         fieldName: 'taxableAmount',
-        // Updated label to show 'Base' as requested
         label: 'Taxable (Base) Amount',
         excelValue: excelInv.taxableAmount,
         pdfValue: pdfInv.taxableAmount,
@@ -165,8 +157,7 @@ export const compareInvoices = (excelData: InvoiceData[], pdfData: InvoiceData[]
     const matchedPdfIndex = pdfData.findIndex((pdfInv, idx) => {
         if (matchedPdfIndices.has(idx)) return false;
         const amountMatch = compareNumbers(excelInv.totalAmount, pdfInv.totalAmount);
-        const dateMatch = excelInv.invoiceDate === pdfInv.invoiceDate || 
-                          normalizeDate(excelInv.invoiceDate) === normalizeDate(pdfInv.invoiceDate);
+        const dateMatch = normalizeDateForComparison(excelInv.invoiceDate) === normalizeDateForComparison(pdfInv.invoiceDate);
         return amountMatch && dateMatch;
     });
     if (matchedPdfIndex !== -1) {

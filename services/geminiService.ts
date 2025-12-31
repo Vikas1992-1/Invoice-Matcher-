@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { InvoiceData } from "../types";
+import { formatDateToDisplay } from "./excelService";
 
 const INVOICE_SCHEMA: Schema = {
   type: Type.ARRAY,
@@ -14,7 +15,7 @@ const INVOICE_SCHEMA: Schema = {
       hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items. If not explicitly stated for an invoice, leave as an empty string." },
       invoice_type: { type: Type.STRING, description: "Document type (e.g., tax invoice, e-invoice, credit note)." },
       has_signature: { type: Type.STRING, description: "Return 'yes' if there is a handwritten signature, stamp, or digital signature (e.g., 'digitally signed by', 'ds', digital certificate markers, or signature QR codes). Otherwise 'no'." },
-      invoice_date: { type: Type.STRING, description: "Date of invoice in YYYY-MM-DD format." },
+      invoice_date: { type: Type.STRING, description: "Date of invoice in DD-MM-YYYY format." },
       taxable_amount: { type: Type.NUMBER, description: "Taxable amount, often labeled as 'base amount', 'subtotal', or 'value of supply' before tax." },
       cgst_amount: { type: Type.NUMBER, description: "Central GST amount." },
       sgst_amount: { type: Type.NUMBER, description: "State GST amount." },
@@ -55,7 +56,7 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
     if (excelReference && excelReference.length > 0) {
         excelRefText = "Reference Excel Data (Ground Truth for Comparison):\n" + 
             excelReference.map(inv => 
-                `Expected Inv: ${inv.invoiceNumber}, Date: ${inv.invoiceDate}, Base/Taxable: ${inv.taxableAmount}, Total: ${inv.totalAmount}, CGST: ${inv.cgstAmount || 0}, SGST: ${inv.sgstAmount || 0}, IGST: ${inv.igstAmount || 0}`
+                `Expected Inv: ${inv.invoiceNumber}, Date: ${inv.invoiceDate}, Base/Taxable: ${inv.taxableAmount}, Total: ${inv.totalAmount}`
             ).join('\n');
     }
 
@@ -68,9 +69,10 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
       1. Extract All: Find every invoice in the PDF.
       2. Exact Invoice Number: Capture the invoice ID literal string exactly.
       3. Digital Signatures: Mark 'has_signature' as 'yes' if you see handwritten signatures, physical stamps, or digital signatures (text like "digitally signed by", "DS", or QR code signatures).
-      4. Taxable Amount: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'. It is the sum of items before GST.
-      5. HSN Code: Only extract HSN/SAC codes if they are explicitly printed on the document. If they are not present, return an empty string. Do not invent or guess HSN codes.
-      6. Precision: Ensure no numbers are skipped. If you are comparing against reference data, ensure your extraction is as accurate as possible.
+      4. Taxable Amount: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'.
+      5. HSN Code: Only extract HSN/SAC codes if they are explicitly printed.
+      6. Date Format: Always extract dates and return them in DD-MM-YYYY format.
+      7. Precision: Ensure no numbers are skipped.
     `;
 
     const response = await ai.models.generateContent({
@@ -105,7 +107,7 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
       invoiceType: item.invoice_type || "Tax Invoice",
       hasSignature: item.has_signature || "no",
       invoiceNumber: item.invoice_number || "Unknown",
-      invoiceDate: item.invoice_date || "",
+      invoiceDate: formatDateToDisplay(item.invoice_date || ""),
       taxableAmount: item.taxable_amount || 0,
       gstAmount: item.gst_amount || 0,
       cgstAmount: item.cgst_amount || 0,

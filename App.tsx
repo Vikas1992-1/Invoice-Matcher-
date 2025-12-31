@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Check, AlertCircle, Loader2, BarChart3, Receipt, FileSpreadsheet, Download, FileStack, History, ArrowLeft, Trash, LogOut, Sparkles, ScanText, TableProperties } from 'lucide-react';
-import { parseExcelFile, downloadExcelReport, downloadExtractionReport, formatReportValue } from './services/excelService';
+import { parseExcelFile, downloadExcelReport, downloadExtractionReport, formatReportValue, formatDateToDisplay } from './services/excelService';
 import { processPdfWithGemini } from './services/geminiService';
 import { createSortedPdf } from './services/pdfService';
 import { compareInvoices } from './utils/comparator';
@@ -464,7 +464,7 @@ const App: React.FC = () => {
                       <tr key={idx} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 font-black text-[#1c2434] text-xs truncate max-w-[120px]">{item.invoiceNumber}</td>
                         <td className="px-6 py-4 text-slate-600 font-bold text-xs truncate max-w-[150px]">{item.vendorName}</td>
-                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{item.invoiceDate}</td>
+                        <td className="px-6 py-4 text-slate-500 font-mono text-[10px]">{formatDateToDisplay(item.invoiceDate)}</td>
                         <td className="px-6 py-4 text-right font-mono text-[10px] font-bold text-slate-700">{item.taxableAmount.toLocaleString()}</td>
                         <td className="px-6 py-4 text-right font-mono text-[10px] font-black text-[#1c2434]">{item.totalAmount.toLocaleString()}</td>
                         <td className="px-6 py-4 font-mono text-[10px] uppercase text-slate-500">
