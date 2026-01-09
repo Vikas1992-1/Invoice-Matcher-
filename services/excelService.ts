@@ -63,57 +63,73 @@ export const parseExcelFile = async (file: File): Promise<InvoiceData[]> => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
         
-        // Convert to JSON with raw headers
-        const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-        
-        const invoices: InvoiceData[] = jsonData.map((row: any) => {
-            // Helper to find value by loosely matching key (contains)
-            const findVal = (keywords: string[]): any => {
-                const key = Object.keys(row).find(k => keywords.some(kw => normalizeKey(k).includes(normalizeKey(kw))));
-                return key ? row[key] : undefined;
-            };
+        let allInvoices: InvoiceData[] = [];
+        let dataFound = false;
 
-            const findValStrict = (keywords: string[]): any => {
-                const key = Object.keys(row).find(k => {
-                    const normK = normalizeKey(k);
-                    return keywords.some(kw => normalizeKey(kw) === normK);
-                });
-                return key ? row[key] : undefined;
-            };
+        // Scan all sheets in the workbook to find data
+        for (const sheetName of workbook.SheetNames) {
+          const sheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          
+          if (jsonData.length === 0) continue;
 
-            const invoiceDateRaw = findVal(['invoice date', 'date']);
-            let invoiceDateStr = '';
-            
-            if (typeof invoiceDateRaw === 'number') {
-                const date = XLSX.SSF.parse_date_code(invoiceDateRaw);
-                invoiceDateStr = `${String(date.d).padStart(2, '0')}-${String(date.m).padStart(2, '0')}-${date.y}`;
-            } else {
-                invoiceDateStr = formatDateToDisplay(String(invoiceDateRaw || ''));
-            }
+          const invoices: InvoiceData[] = jsonData.map((row: any) => {
+              // Helper to find value by loosely matching key (contains)
+              const findVal = (keywords: string[]): any => {
+                  const key = Object.keys(row).find(k => keywords.some(kw => normalizeKey(k).includes(normalizeKey(kw))));
+                  return key ? row[key] : undefined;
+              };
 
-            return {
-                id: String(findValStrict(['id', 'sr no', 's.no', 'serial no']) || '').trim(),
-                vendorName: String(findVal(['vendor name', 'vendor', 'wd name']) || '').trim(),
-                gstNumber: String(findVal(['gst number', 'gst']) || '').trim(),
-                invoiceNumber: String(findVal(['invoice number', 'inv no', 'invoice #']) || '').trim(),
-                invoiceDate: invoiceDateStr,
-                taxableAmount: parseFloat(String(findVal(['base amount', 'taxable amount', 'gross amount', 'taxable']) || '0').replace(/,/g, '')),
-                gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount', 'total tax']) || '0').replace(/,/g, '')),
-                cgstAmount: parseFloat(String(findVal(['cgst', 'cgst amount', 'central tax']) || '0').replace(/,/g, '')),
-                sgstAmount: parseFloat(String(findVal(['sgst', 'sgst amount', 'state tax', 'utgst']) || '0').replace(/,/g, '')),
-                igstAmount: parseFloat(String(findVal(['igst', 'igst amount', 'integrated tax']) || '0').replace(/,/g, '')),
-                totalAmount: parseFloat(String(findVal(['invoice amount', 'total amount', 'total']) || '0').replace(/,/g, '')),
-                branch: String(findVal(['branch']) || ''),
-                description: String(findVal(['description']) || ''),
-                soNumber: String(findVal(['so', 'so number']) || ''),
-                wdCode: String(findVal(['wd code', 'wd']) || ''),
-            };
-        });
+              const findValStrict = (keywords: string[]): any => {
+                  const key = Object.keys(row).find(k => {
+                      const normK = normalizeKey(k);
+                      return keywords.some(kw => normalizeKey(kw) === normK);
+                  });
+                  return key ? row[key] : undefined;
+              };
 
-        resolve(invoices);
+              const invoiceDateRaw = findVal(['invoice date', 'date']);
+              let invoiceDateStr = '';
+              
+              if (typeof invoiceDateRaw === 'number') {
+                  const date = XLSX.SSF.parse_date_code(invoiceDateRaw);
+                  invoiceDateStr = `${String(date.d).padStart(2, '0')}-${String(date.m).padStart(2, '0')}-${date.y}`;
+              } else {
+                  invoiceDateStr = formatDateToDisplay(String(invoiceDateRaw || ''));
+              }
+
+              return {
+                  id: String(findValStrict(['id', 'sr no', 's.no', 'serial no']) || '').trim(),
+                  vendorName: String(findVal(['vendor name', 'vendor', 'wd name']) || '').trim(),
+                  gstNumber: String(findVal(['gst number', 'gst']) || '').trim(),
+                  invoiceNumber: String(findVal(['invoice number', 'inv no', 'invoice #']) || '').trim(),
+                  invoiceDate: invoiceDateStr,
+                  taxableAmount: parseFloat(String(findVal(['base amount', 'taxable amount', 'gross amount', 'taxable']) || '0').replace(/,/g, '')),
+                  gstAmount: parseFloat(String(findVal(['gst amount', 'tax amount', 'total tax']) || '0').replace(/,/g, '')),
+                  cgstAmount: parseFloat(String(findVal(['cgst', 'cgst amount', 'central tax']) || '0').replace(/,/g, '')),
+                  sgstAmount: parseFloat(String(findVal(['sgst', 'sgst amount', 'state tax', 'utgst']) || '0').replace(/,/g, '')),
+                  igstAmount: parseFloat(String(findVal(['igst', 'igst amount', 'integrated tax']) || '0').replace(/,/g, '')),
+                  totalAmount: parseFloat(String(findVal(['invoice amount', 'total amount', 'total']) || '0').replace(/,/g, '')),
+                  branch: String(findVal(['branch']) || ''),
+                  description: String(findVal(['description']) || ''),
+                  soNumber: String(findVal(['so', 'so number']) || ''),
+                  wdCode: String(findVal(['wd code', 'wd']) || ''),
+              };
+          }).filter(inv => inv.invoiceNumber !== '' || inv.totalAmount > 0); // Filter out empty-looking rows
+
+          if (invoices.length > 0) {
+            allInvoices = invoices;
+            dataFound = true;
+            break; // Stop at the first sheet that has valid data
+          }
+        }
+
+        if (!dataFound) {
+          reject(new Error("No data found in any sheet of the Excel file. Please ensure your columns are named correctly (e.g., 'Invoice Number', 'Total Amount')."));
+        } else {
+          resolve(allInvoices);
+        }
       } catch (error) {
         reject(error);
       }
@@ -157,7 +173,7 @@ export const downloadExcelReport = (results: InvoiceComparisonResult[]) => {
       "GST Number (PDF)": pdf.gstNumber,
       "GST Match": getMatchStatus('gstNumber'),
       
-      "PMC Consultant GST (PDF)": pdf.pmcConsultantGst || '',
+      "PMC Consultant GST (PDF)": formatReportValue(pdf.pmcConsultantGst, 'N/A', 'upper'),
       "Reverse Charge (PDF)": formatReportValue(pdf.reverseCharge, 'N/a', 'capitalize'),
       "HSN Code (PDF)": formatReportValue(pdf.hsnCode, 'N/a', 'upper'),
       "Invoice Type (PDF)": pdf.invoiceType || '',
@@ -207,7 +223,7 @@ export const downloadExtractionReport = (data: InvoiceData[]) => {
   const exportData = data.map(item => ({
     "Vendor Name": item.vendorName,
     "GST Number": item.gstNumber,
-    "PMC/Consultant GST": item.pmcConsultantGst || '',
+    "PMC/Consultant GST": formatReportValue(item.pmcConsultantGst, 'N/A', 'upper'),
     "Invoice Number": item.invoiceNumber,
     "Invoice Date": item.invoiceDate,
     "Taxable (Base) Amount": item.taxableAmount,

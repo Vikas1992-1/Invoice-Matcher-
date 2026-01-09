@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InvoiceComparisonResult } from '../types';
-import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle, XCircle, AlertTriangle, FileQuestion, ArrowRight, ShieldCheck, ShieldX } from 'lucide-react';
 import { formatReportValue, formatDateToDisplay } from '../services/excelService';
 
 interface Props {
@@ -84,14 +84,27 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
       {expanded && (
         <div className="bg-slate-50/50 border-t border-slate-100 p-6 animate-in slide-in-from-top-4 duration-300">
           {result.extractedData && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div className={`p-4 rounded-xl border shadow-sm transition-all ${result.extractedData.pmcConsultantGst ? 'bg-emerald-50/30 border-emerald-100' : 'bg-white'}`}>
+                   <div className="flex items-center justify-between mb-1">
+                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PMC Consultant GST</p>
+                     {result.extractedData.pmcConsultantGst ? (
+                       <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                     ) : (
+                       <ShieldX className="w-3 h-3 text-slate-300" />
+                     )}
+                   </div>
+                   <p className={`text-sm font-black truncate ${result.extractedData.pmcConsultantGst ? 'text-emerald-700' : 'text-brand'}`} title={result.extractedData.pmcConsultantGst || 'Not Found'}>
+                     {formatReportValue(result.extractedData.pmcConsultantGst, 'N/A', 'upper')}
+                   </p>
+                </div>
                 <div className="bg-white p-4 rounded-xl border shadow-sm">
                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">HSN Code (PDF)</p>
-                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.hsnCode, 'N/a', 'upper')}</p>
+                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.hsnCode, 'N/A', 'upper')}</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border shadow-sm">
                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Reverse Charge (PDF)</p>
-                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.reverseCharge, 'N/a', 'capitalize')}</p>
+                   <p className="text-sm font-black text-brand">{formatReportValue(result.extractedData.reverseCharge, 'N/A', 'capitalize')}</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border shadow-sm">
                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Signature Found (PDF)</p>
@@ -99,7 +112,7 @@ const ComparisonResultRow: React.FC<Props> = ({ result }) => {
                 </div>
                 <div className="bg-white p-4 rounded-xl border shadow-sm">
                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Page Range</p>
-                   <p className="text-sm font-black text-brand">{result.extractedData.pageRange?.start || 'N/a'} - {result.extractedData.pageRange?.end || result.extractedData.pageRange?.start || 'N/a'}</p>
+                   <p className="text-sm font-black text-brand">{result.extractedData.pageRange?.start || 'N/A'} - {result.extractedData.pageRange?.end || result.extractedData.pageRange?.start || 'N/A'}</p>
                 </div>
               </div>
           )}

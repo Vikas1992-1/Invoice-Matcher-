@@ -7,16 +7,16 @@ const INVOICE_SCHEMA: Schema = {
   items: {
     type: Type.OBJECT,
     properties: {
-      invoice_number: { type: Type.STRING, description: "The unique invoice number extracted exactly as it appears on the document. Do not strip prefixes, suffixes, special characters, or leading zeros. Capture the full literal string." },
+      invoice_number: { type: Type.STRING, description: "The unique invoice number extracted exactly as it appears on the document." },
       vendor_name: { type: Type.STRING, description: "Name of the vendor/seller." },
-      gst_number: { type: Type.STRING, description: "GSTIN or tax ID of the vendor." },
-      pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/tax ID specifically labeled for a PMC (Project Management Consultant) or secondary consultant, if present." },
+      gst_number: { type: Type.STRING, description: "GSTIN or tax ID of the vendor/seller." },
+      pmc_consultant_gst: { type: Type.STRING, description: "The GSTIN/tax ID belonging to 'PMC Consultants Private Limited' or 'PMC Consultants Pvt Ltd'. IMPORTANT: ONLY extract this if it is explicitly printed on the pages of THIS specific invoice. If it is missing on these pages, return an empty string. DO NOT use a GST number found on other invoices in the same file." },
       reverse_charge: { type: Type.STRING, description: "Indicates if reverse charge is applicable. Return 'yes' or 'no'." },
-      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items. If not explicitly stated for an invoice, leave as an empty string." },
+      hsn_code: { type: Type.STRING, description: "HSN or SAC code found in line items." },
       invoice_type: { type: Type.STRING, description: "Document type (e.g., tax invoice, e-invoice, credit note)." },
-      has_signature: { type: Type.STRING, description: "Return 'yes' if there is a handwritten signature, stamp, or digital signature (e.g., 'digitally signed by', 'ds', digital certificate markers, or signature QR codes). Otherwise 'no'." },
+      has_signature: { type: Type.STRING, description: "Return 'yes' if there is a signature or digital stamp, otherwise 'no'." },
       invoice_date: { type: Type.STRING, description: "Date of invoice in DD-MM-YYYY format." },
-      taxable_amount: { type: Type.NUMBER, description: "Taxable amount, often labeled as 'base amount', 'subtotal', or 'value of supply' before tax." },
+      taxable_amount: { type: Type.NUMBER, description: "Taxable amount before tax." },
       cgst_amount: { type: Type.NUMBER, description: "Central GST amount." },
       sgst_amount: { type: Type.NUMBER, description: "State GST amount." },
       igst_amount: { type: Type.NUMBER, description: "Integrated GST amount." },
@@ -61,18 +61,20 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
     }
 
     const prompt = `
-      You are a high-precision financial auditor. The PDF contains multiple invoices.
+      You are a high-precision financial auditor performing a strict audit. The PDF contains multiple invoices.
       
       ${excelRefText}
 
-      Instructions:
-      1. Extract All: Find every invoice in the PDF.
-      2. Exact Invoice Number: Capture the invoice ID literal string exactly.
-      3. Digital Signatures: Mark 'has_signature' as 'yes' if you see handwritten signatures, physical stamps, or digital signatures (text like "digitally signed by", "DS", or QR code signatures).
-      4. Taxable Amount: Identify the 'Taxable Amount' which is also often called 'Base Amount' or 'Gross Amount (excluding tax)'.
-      5. HSN Code: Only extract HSN/SAC codes if they are explicitly printed.
-      6. Date Format: Always extract dates and return them in DD-MM-YYYY format.
-      7. Precision: Ensure no numbers are skipped.
+      STRICT EXTRACTION PROTOCOL:
+      1. INDEPENDENT VERIFICATION: Treat every invoice (and its set of pages) as a completely separate document. 
+      2. PMC GST STRICTURE: 
+         - Look for the company name: 'PMC Consultants Private Limited' or 'PMC Consultants Pvt Ltd'.
+         - If the company name is found on the current invoice pages, look for its specific 15-digit GSTIN.
+         - CRITICAL: If the GSTIN for PMC is NOT explicitly printed on the specific pages of the invoice you are currently extracting, you MUST return an empty string for 'pmc_consultant_gst'. 
+         -hallucination warning: DO NOT reuse a PMC GST number found earlier in the PDF if it is missing on the current page (e.g., check Meena Traders invoice carefully; if GST is blank there, return empty string).
+      3. EXACT MATCHING: Capture invoice numbers exactly as printed.
+      4. DIGITAL SIGNATURES: Check for "Digitally signed by", QR codes, or physical stamps.
+      5. DATE FORMAT: Standardize to DD-MM-YYYY.
     `;
 
     const response = await ai.models.generateContent({
@@ -91,7 +93,7 @@ export const processPdfWithGemini = async (pdfFile: File, excelReference?: Invoi
       config: {
         responseMimeType: "application/json",
         responseSchema: INVOICE_SCHEMA,
-        thinkingConfig: { thinkingBudget: 2048 }
+        thinkingConfig: { thinkingBudget: 4096 }
       }
     });
 
